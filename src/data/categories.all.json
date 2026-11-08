@@ -1,0 +1,1212 @@
+{
+  "source": "Miami-Dade County 311 Service Requests, Jan-Oct 2026",
+  "generatedFrom": "data_311_2026.geojson",
+  "totalReports": 163220,
+  "categories": [
+    {
+      "code": "garbage-collection",
+      "label": "Garbage not collected",
+      "group": "waste",
+      "subjects": [
+        "Garbage Service Issue",
+        "Solid Waste Missed Pickup - City of Miami"
+      ],
+      "departments": [
+        "Solid Waste Management",
+        "City of Miami Solid Waste"
+      ],
+      "sla": "10 Calendar Days",
+      "subtypes": [
+        "Green Garbage Cart",
+        "Green Garbage Service",
+        "Green garbage service",
+        "Blue recycling service",
+        "Bulky Trash service"
+      ],
+      "stats": {
+        "reports2026": 59234,
+        "openNow": 2900,
+        "medianDaysToClose": 4.1,
+        "p90DaysToClose": 11.0
+      }
+    },
+    {
+      "code": "mosquitoes",
+      "label": "Mosquito problem",
+      "group": "pests",
+      "subjects": [
+        "Mosquito Inspection Request"
+      ],
+      "departments": [
+        "Solid Waste Management"
+      ],
+      "sla": "5 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 21451,
+        "openNow": 29,
+        "medianDaysToClose": 1.0,
+        "p90DaysToClose": 2.8
+      }
+    },
+    {
+      "code": "recycling",
+      "label": "Recycling not collected",
+      "group": "waste",
+      "subjects": [
+        "Multifamily or Business Recycling Issue",
+        "Recycling Service Issue"
+      ],
+      "departments": [
+        "Solid Waste Management"
+      ],
+      "sla": "10 Calendar Days",
+      "subtypes": [
+        "Blue Recycling Cart",
+        "Recycling Service"
+      ],
+      "stats": {
+        "reports2026": 18415,
+        "openNow": 1263,
+        "medianDaysToClose": 5.0,
+        "p90DaysToClose": 12.1
+      }
+    },
+    {
+      "code": "animal-welfare",
+      "label": "Animal welfare concern",
+      "group": "animals",
+      "subjects": [
+        "Animal Welfare Concern"
+      ],
+      "departments": [
+        "Animal Services"
+      ],
+      "sla": "30 Calendar Days",
+      "subtypes": [
+        "Injured Animal",
+        "Abused or Neglected Animal",
+        "Pet Owner Allows Dog to Roam Without a Leash",
+        "Aggressive or Dangerous Dog",
+        "Tied or Tethered Dog",
+        "Abused or Neglected Animal (Console Only)"
+      ],
+      "stats": {
+        "reports2026": 7475,
+        "openNow": 36,
+        "medianDaysToClose": 0.1,
+        "p90DaysToClose": 15.1
+      }
+    },
+    {
+      "code": "pothole",
+      "label": "Pothole or roadway defect",
+      "group": "roads",
+      "subjects": [
+        "Pothole - City of Miami",
+        "Pothole or Roadway Defect"
+      ],
+      "departments": [
+        "Transportation and Public Works",
+        "City of Miami Public Works"
+      ],
+      "sla": "90 Business Days",
+      "subtypes": [
+        "Potholes",
+        "Roadway is Worn or has Defects",
+        "Cave-in or Sinkhole",
+        "Guardrail or Handrail is Damaged",
+        "Fence along Roadway Needs Repair"
+      ],
+      "stats": {
+        "reports2026": 6104,
+        "openNow": 2709,
+        "medianDaysToClose": 20.9,
+        "p90DaysToClose": 98.0
+      }
+    },
+    {
+      "code": "tree-issue",
+      "label": "Tree or landscape hazard",
+      "group": "trees",
+      "subjects": [
+        "Tree Safety Issues - City of Miami",
+        "Tree and Landscape Services - City of Miami",
+        "Tree or Landscape Issue on Public Roadway"
+      ],
+      "departments": [
+        "Parks Recreation and Open Spaces",
+        "City of Miami Public Works"
+      ],
+      "sla": "30 Business Days",
+      "subtypes": [
+        "Low hanging branches over the roadway or sidewalk",
+        "Tree Trimming/Pruning",
+        "Tree needs removing or stump grinding",
+        "Tree is blocking the view of a stop sign or traffic signal or blocking the roadway",
+        "Overgrown grass or bushes",
+        "Leaning tree",
+        "Dead or Sick Tree",
+        "Tree down",
+        "Tree Planting",
+        "Tree blocking a Traffic Signal or Stop Sign",
+        "Tree Stump Removal/Grinding",
+        "Overgrown grass/Mowing Public Right-of-Way"
+      ],
+      "stats": {
+        "reports2026": 5646,
+        "openNow": 1131,
+        "medianDaysToClose": 11.0,
+        "p90DaysToClose": 116.9
+      }
+    },
+    {
+      "code": "traffic-signal",
+      "label": "Traffic signal problem",
+      "group": "traffic",
+      "subjects": [
+        "Traffic Signal Issue"
+      ],
+      "departments": [
+        "Transportation and Public Works"
+      ],
+      "sla": "60 Business Days",
+      "subtypes": [
+        "Timing Issue with the Lights",
+        "Traffic Signal Not Changing Colors",
+        "Traffic Signal Flashing Yellow or Red",
+        "Traffic Signal Completely Out",
+        "On an overhead School Zone sign above the street",
+        "Crossing button does not work",
+        "Bulb Burned Out",
+        "Walk/Don't Walk displays do not turn on",
+        "Issue with the Traffic Signal Head",
+        "On a School Zone sign posted on the street",
+        "Overhead Sign is Damaged",
+        "Gate Arms along the South Dade TransitWay"
+      ],
+      "stats": {
+        "reports2026": 4882,
+        "openNow": 675,
+        "medianDaysToClose": 3.7,
+        "p90DaysToClose": 56.2
+      }
+    },
+    {
+      "code": "dead-animal",
+      "label": "Dead animal",
+      "group": "animals",
+      "subjects": [
+        "Dead Animal Pickup",
+        "Dead Animal Pickup - City of Miami"
+      ],
+      "departments": [
+        "Animal Services",
+        "City of Miami Solid Waste"
+      ],
+      "sla": "2 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 4741,
+        "openNow": 0,
+        "medianDaysToClose": 0.7,
+        "p90DaysToClose": 1.9
+      }
+    },
+    {
+      "code": "illegal-dumping",
+      "label": "Illegal dumping or litter",
+      "group": "waste",
+      "subjects": [
+        "Illegal Dumping Investigation",
+        "Illegal Dumping or Litter - City of Miami"
+      ],
+      "departments": [
+        "Solid Waste Management",
+        "City of Miami Solid Waste"
+      ],
+      "sla": "15 Calendar Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 4661,
+        "openNow": 0,
+        "medianDaysToClose": 0.9,
+        "p90DaysToClose": 5.0
+      }
+    },
+    {
+      "code": "bulky-waste",
+      "label": "Bulky waste not picked up",
+      "group": "waste",
+      "subjects": [
+        "Bulky Waste Pickup Complaint"
+      ],
+      "departments": [
+        "Solid Waste Management"
+      ],
+      "sla": "7 Calendar Days",
+      "subtypes": [
+        "Missed Pickup",
+        "Bulky Trash Miscellaneous Complaint",
+        "Partial Pickup",
+        "Property Damage",
+        "Bulky Trash Vehicle Complaint",
+        "Sloppy Service"
+      ],
+      "stats": {
+        "reports2026": 4383,
+        "openNow": 288,
+        "medianDaysToClose": 111.8,
+        "p90DaysToClose": 209.7
+      }
+    },
+    {
+      "code": "animal-bite",
+      "label": "Animal bite",
+      "group": "animals",
+      "subjects": [
+        "Animal Bite to a Person"
+      ],
+      "departments": [
+        "Animal Services"
+      ],
+      "sla": "3 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 3967,
+        "openNow": 0,
+        "medianDaysToClose": 7.1,
+        "p90DaysToClose": 16.2
+      }
+    },
+    {
+      "code": "traffic-sign",
+      "label": "Traffic sign problem",
+      "group": "traffic",
+      "subjects": [
+        "Traffic Sign Issue"
+      ],
+      "departments": [
+        "Transportation and Public Works"
+      ],
+      "sla": "120 Business Days",
+      "subtypes": [
+        "Traffic Sign",
+        "Pavement Markings or Roadway Markers",
+        "Street Name Sign"
+      ],
+      "stats": {
+        "reports2026": 2697,
+        "openNow": 784,
+        "medianDaysToClose": 10.1,
+        "p90DaysToClose": 45.4
+      }
+    },
+    {
+      "code": "abandoned-vehicle",
+      "label": "Abandoned or unauthorized vehicle",
+      "group": "traffic",
+      "subjects": [
+        "Abandoned Vehicle - City of Miami",
+        "Unauthorized or Abandoned Vehicle"
+      ],
+      "departments": [
+        "Regulatory and Economic Resources",
+        "City of Miami Code Compliance"
+      ],
+      "sla": "15 Business Days",
+      "subtypes": [
+        "Abandoned Vehicle or Boat",
+        "Commercial Vehicle Parked in a Residential Area"
+      ],
+      "stats": {
+        "reports2026": 2443,
+        "openNow": 334,
+        "medianDaysToClose": 12.0,
+        "p90DaysToClose": 42.9
+      }
+    },
+    {
+      "code": "property-neglect",
+      "label": "Property not maintained",
+      "group": "property",
+      "subjects": [
+        "Building Maintenance Inadequate - City of Miami",
+        "Inadequate Maintenance of a Property"
+      ],
+      "departments": [
+        "Regulatory and Economic Resources",
+        "City of Miami Code Compliance"
+      ],
+      "sla": "15 Business Days",
+      "subtypes": [
+        "Junk, Trash or Grass Overgrown",
+        "Right of Way Maintenance",
+        "Interior/Exterior Standards",
+        "Structure Maintenance",
+        "Pool Maintenance",
+        "Unsecured Vacant Property",
+        "Bee Infestation"
+      ],
+      "stats": {
+        "reports2026": 1904,
+        "openNow": 432,
+        "medianDaysToClose": 13.2,
+        "p90DaysToClose": 54.8
+      }
+    },
+    {
+      "code": "flooding",
+      "label": "Flooding or drainage",
+      "group": "water",
+      "subjects": [
+        "Flooding or Drainage Issue",
+        "Storm Flood or Drainage - City of Miami"
+      ],
+      "departments": [
+        "Transportation and Public Works",
+        "City of Miami Public Works"
+      ],
+      "sla": "365 Calendar Days",
+      "subtypes": [
+        "Storm Drain Blocked or Clogged by Debris",
+        "Flooding or Standing Water for Days",
+        "Storm Drain Damaged",
+        "Cave in Next to Storm Drain",
+        "Missing Storm Drain Cover",
+        "Object in the Storm Drain"
+      ],
+      "stats": {
+        "reports2026": 1900,
+        "openNow": 600,
+        "medianDaysToClose": 13.1,
+        "p90DaysToClose": 48.9
+      }
+    },
+    {
+      "code": "code-violation",
+      "label": "Code violation on private property",
+      "group": "property",
+      "subjects": [
+        "Code Violation on Private Property"
+      ],
+      "departments": [
+        "Regulatory and Economic Resources"
+      ],
+      "sla": "15 Business Days",
+      "subtypes": [
+        "Structure installed without a zoning permit",
+        "Prohibited animals in a residential area",
+        "Structure installed within the setback area",
+        "Overheight Fence or Hedge",
+        "Graffiti on private property"
+      ],
+      "stats": {
+        "reports2026": 1879,
+        "openNow": 341,
+        "medianDaysToClose": 15.0,
+        "p90DaysToClose": 58.0
+      }
+    },
+    {
+      "code": "sidewalk",
+      "label": "Sidewalk damage",
+      "group": "roads",
+      "subjects": [
+        "Sidewalk Damage -City of Miami",
+        "Sidewalk Issue"
+      ],
+      "departments": [
+        "Transportation and Public Works",
+        "City of Miami Public Works"
+      ],
+      "sla": "30 Business Days",
+      "subtypes": [
+        "Sidewalk is broken or raised",
+        "Pedestrian path needs maintenance",
+        "There is a drop off along the sidewalk",
+        "Sidewalk is undermined by a hole"
+      ],
+      "stats": {
+        "reports2026": 1779,
+        "openNow": 1651,
+        "medianDaysToClose": 43.5,
+        "p90DaysToClose": 146.5
+      }
+    },
+    {
+      "code": "abandoned-cart",
+      "label": "Abandoned shopping cart",
+      "group": "waste",
+      "subjects": [
+        "Abandoned Carts",
+        "Abandoned Shopping Cart - City of Miami"
+      ],
+      "departments": [
+        "Solid Waste Management",
+        "City of Miami Solid Waste"
+      ],
+      "sla": "10 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 978,
+        "openNow": 0,
+        "medianDaysToClose": 0.8,
+        "p90DaysToClose": 3.3
+      }
+    },
+    {
+      "code": "unpermitted-work",
+      "label": "Construction without a permit",
+      "group": "construction",
+      "subjects": [
+        "Construction Without Permits - City of Miami",
+        "Illegal Construction In Progress - City of Miami",
+        "Work Without a Building Permit"
+      ],
+      "departments": [
+        "Regulatory and Economic Resources",
+        "City of Miami Building",
+        "City of Miami Code Compliance"
+      ],
+      "sla": "5 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 752,
+        "openNow": 17,
+        "medianDaysToClose": 0.0,
+        "p90DaysToClose": 9.9
+      }
+    },
+    {
+      "code": "street-light",
+      "label": "Street light out",
+      "group": "traffic",
+      "subjects": [
+        "Street Light Issue"
+      ],
+      "departments": [
+        "Transportation and Public Works"
+      ],
+      "sla": "30 Calendar Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 715,
+        "openNow": 0,
+        "medianDaysToClose": 0.0,
+        "p90DaysToClose": 0.0
+      }
+    },
+    {
+      "code": "illegal-unit",
+      "label": "Illegal dwelling unit",
+      "group": "property",
+      "subjects": [
+        "Illegal Residential Use or Unit",
+        "Illegal Units - City of Miami"
+      ],
+      "departments": [
+        "Regulatory and Economic Resources",
+        "City of Miami Code Compliance"
+      ],
+      "sla": "15 Business Days",
+      "subtypes": [
+        "Illegal subdivision of a home to create multi-family use with separate living units or efficiences",
+        "Automobile repairs conducted at the home",
+        "Home occupation operating from a property",
+        "Mobile home on a property",
+        "Home with an attached or detached unit or guesthouse",
+        "Short-term vacation rental"
+      ],
+      "stats": {
+        "reports2026": 692,
+        "openNow": 111,
+        "medianDaysToClose": 16.2,
+        "p90DaysToClose": 67.7
+      }
+    },
+    {
+      "code": "business-violation",
+      "label": "Business operating in violation",
+      "group": "property",
+      "subjects": [
+        "Business Operating Without Required Certificates - City of Miami",
+        "Code Violation - Business",
+        "Illegal Mechanical Repairs - City of Miami"
+      ],
+      "departments": [
+        "Regulatory and Economic Resources",
+        "City of Miami Code Compliance"
+      ],
+      "sla": "15 Business Days",
+      "subtypes": [
+        "Failure to Maintain Business Premise",
+        "Business Operating without a Certificate of Use",
+        "Illegal Street Vendors",
+        "Parking Lot not Properly Maintained or Configured",
+        "Illegal display of vehicles for sale"
+      ],
+      "stats": {
+        "reports2026": 662,
+        "openNow": 101,
+        "medianDaysToClose": 11.9,
+        "p90DaysToClose": 54.9
+      }
+    },
+    {
+      "code": "illegal-sign",
+      "label": "Illegal or unpermitted sign",
+      "group": "nuisance",
+      "subjects": [
+        "Illegal Sign",
+        "Signs Without Permit - City of Miami"
+      ],
+      "departments": [
+        "Regulatory and Economic Resources",
+        "City of Miami Code Compliance"
+      ],
+      "sla": "15 Business Days",
+      "subtypes": [
+        "Public Property",
+        "Private Property"
+      ],
+      "stats": {
+        "reports2026": 586,
+        "openNow": 10,
+        "medianDaysToClose": 1.7,
+        "p90DaysToClose": 5.8
+      }
+    },
+    {
+      "code": "water-sewer-leak",
+      "label": "Water or sewer leak",
+      "group": "water",
+      "subjects": [
+        "Broken or Leaking Water or Sewer Line"
+      ],
+      "departments": [
+        "Water and Sewer"
+      ],
+      "sla": "1 Business Day",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 514,
+        "openNow": 7,
+        "medianDaysToClose": 13.5,
+        "p90DaysToClose": 32.1
+      }
+    },
+    {
+      "code": "park-problem",
+      "label": "Problem at a park",
+      "group": "parks",
+      "subjects": [
+        "Concern at a County Park"
+      ],
+      "departments": [
+        "Parks Recreation and Open Spaces"
+      ],
+      "sla": "2 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 461,
+        "openNow": 0,
+        "medianDaysToClose": 0.9,
+        "p90DaysToClose": 3.0
+      }
+    },
+    {
+      "code": "roadway-construction",
+      "label": "Roadway construction complaint",
+      "group": "roads",
+      "subjects": [
+        "Construction Complaint - Roadway"
+      ],
+      "departments": [
+        "Transportation and Public Works"
+      ],
+      "sla": "14 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 390,
+        "openNow": 239,
+        "medianDaysToClose": 34.8,
+        "p90DaysToClose": 101.0
+      }
+    },
+    {
+      "code": "trolley-complaint",
+      "label": "Miami Trolley complaint",
+      "group": "traffic",
+      "subjects": [
+        "Miami Trolley - On Demand Transportation Service Complaint - City of Miami"
+      ],
+      "departments": [
+        "City of Miami Public Works"
+      ],
+      "sla": "20 Business Days",
+      "subtypes": [
+        "Trolley",
+        "On Demand Transportation"
+      ],
+      "stats": {
+        "reports2026": 362,
+        "openNow": 50,
+        "medianDaysToClose": 6.9,
+        "p90DaysToClose": 36.3
+      }
+    },
+    {
+      "code": "noise-violation",
+      "label": "Noise violation",
+      "group": "nuisance",
+      "subjects": [
+        "Noise Violation - City of Miami"
+      ],
+      "departments": [
+        "City of Miami Code Compliance"
+      ],
+      "sla": "3 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 360,
+        "openNow": 9,
+        "medianDaysToClose": 3.9,
+        "p90DaysToClose": 14.2
+      }
+    },
+    {
+      "code": "manhole",
+      "label": "Missing or broken manhole cover",
+      "group": "roads",
+      "subjects": [
+        "Broken or Missing Manhole Cover",
+        "Manhole or Utility Cover Missing - City of Miami"
+      ],
+      "departments": [
+        "Water and Sewer",
+        "City of Miami Public Works"
+      ],
+      "sla": "2 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 355,
+        "openNow": 10,
+        "medianDaysToClose": 14.5,
+        "p90DaysToClose": 34.7
+      }
+    },
+    {
+      "code": "illegal-storage",
+      "label": "Junk or illegal storage on property",
+      "group": "property",
+      "subjects": [
+        "Illegal Storage of Recreational Vehicles - City of Miami",
+        "Illegal Storage on Residential Property",
+        "Illegal Storage or Junk in Yard - City of Miami"
+      ],
+      "departments": [
+        "Regulatory and Economic Resources",
+        "City of Miami Code Compliance"
+      ],
+      "sla": "15 Business Days",
+      "subtypes": [
+        "Recreational Vehicle (RV) or Camping Equipment",
+        "Boat",
+        "Portable Mini-Storage Unit"
+      ],
+      "stats": {
+        "reports2026": 354,
+        "openNow": 40,
+        "medianDaysToClose": 10.1,
+        "p90DaysToClose": 50.2
+      }
+    },
+    {
+      "code": "canal",
+      "label": "Canal or bridge maintenance",
+      "group": "roads",
+      "subjects": [
+        "Canal & Bridge Maintenance",
+        "Canal Cleaning - City of Miami"
+      ],
+      "departments": [
+        "Transportation and Public Works",
+        "City of Miami Public Works"
+      ],
+      "sla": "180 Business Days",
+      "subtypes": [
+        "Canal Maintenance",
+        "Collapsing Seawall",
+        "Bridge Repair"
+      ],
+      "stats": {
+        "reports2026": 302,
+        "openNow": 69,
+        "medianDaysToClose": 13.0,
+        "p90DaysToClose": 54.7
+      }
+    },
+    {
+      "code": "loose-livestock",
+      "label": "Loose livestock or chickens",
+      "group": "animals",
+      "subjects": [
+        "Chicken Or Grazing Animal - City of Miami"
+      ],
+      "departments": [
+        "City of Miami Code Compliance"
+      ],
+      "sla": "3 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 264,
+        "openNow": 3,
+        "medianDaysToClose": 3.3,
+        "p90DaysToClose": 10.2
+      }
+    },
+    {
+      "code": "overgrown-lot",
+      "label": "Overgrown lot",
+      "group": "trees",
+      "subjects": [
+        "Overgrown Lot - City of Miami"
+      ],
+      "departments": [
+        "City of Miami Code Compliance"
+      ],
+      "sla": "3 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 231,
+        "openNow": 3,
+        "medianDaysToClose": 5.3,
+        "p90DaysToClose": 13.2
+      }
+    },
+    {
+      "code": "unsafe-structure",
+      "label": "Unsafe or vacant structure",
+      "group": "construction",
+      "subjects": [
+        "Building Demolitions And Unsafe Structures  - City of Miami",
+        "Vacant or Unsecured Structure - City of Miami"
+      ],
+      "departments": [
+        "City of Miami Building",
+        "City of Miami Code Compliance"
+      ],
+      "sla": "5 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 209,
+        "openNow": 20,
+        "medianDaysToClose": 7.1,
+        "p90DaysToClose": 32.8
+      }
+    },
+    {
+      "code": "water-sewer-construction",
+      "label": "Water/sewer construction complaint",
+      "group": "water",
+      "subjects": [
+        "Water and Sewer Construction Complaint"
+      ],
+      "departments": [
+        "Water and Sewer"
+      ],
+      "sla": "3 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 169,
+        "openNow": 0,
+        "medianDaysToClose": 0.1,
+        "p90DaysToClose": 2.7
+      }
+    },
+    {
+      "code": "illegal-parking",
+      "label": "Illegal parking",
+      "group": "traffic",
+      "subjects": [
+        "Illegal Parking - City of Miami"
+      ],
+      "departments": [
+        "City of Miami Code Compliance"
+      ],
+      "sla": "3 Business Days",
+      "subtypes": [
+        "Parking Commercial Vehicle In Residential Zone",
+        "Parking On Unimproved Surfaces"
+      ],
+      "stats": {
+        "reports2026": 159,
+        "openNow": 1,
+        "medianDaysToClose": 3.8,
+        "p90DaysToClose": 11.7
+      }
+    },
+    {
+      "code": "graffiti",
+      "label": "Graffiti",
+      "group": "nuisance",
+      "subjects": [
+        "Graffiti - City of Miami",
+        "Graffiti on Public Roadway"
+      ],
+      "departments": [
+        "Transportation and Public Works",
+        "City of Miami Code Compliance"
+      ],
+      "sla": "14 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 139,
+        "openNow": 5,
+        "medianDaysToClose": 20.2,
+        "p90DaysToClose": 111.4
+      }
+    },
+    {
+      "code": "waste-facility",
+      "label": "Problem at a waste facility",
+      "group": "waste",
+      "subjects": [
+        "Issue at a Miami-Dade Solid Waste Facility"
+      ],
+      "departments": [
+        "Solid Waste Management"
+      ],
+      "sla": "1 Business Day",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 137,
+        "openNow": 83,
+        "medianDaysToClose": 0.9,
+        "p90DaysToClose": 3.3
+      }
+    },
+    {
+      "code": "hydrant-leak",
+      "label": "Leaking fire hydrant",
+      "group": "water",
+      "subjects": [
+        "Broken or Leaking Water Hydrant"
+      ],
+      "departments": [
+        "Water and Sewer"
+      ],
+      "sla": "8 Hours",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 129,
+        "openNow": 1,
+        "medianDaysToClose": 13.7,
+        "p90DaysToClose": 27.5
+      }
+    },
+    {
+      "code": "sinkhole",
+      "label": "Sinkhole or cave-in",
+      "group": "roads",
+      "subjects": [
+        "Cave In Or Sinkhole - City of Miami",
+        "Sinkhole"
+      ],
+      "departments": [
+        "Water and Sewer",
+        "City of Miami Public Works"
+      ],
+      "sla": "3 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 112,
+        "openNow": 17,
+        "medianDaysToClose": 8.9,
+        "p90DaysToClose": 26.8
+      }
+    },
+    {
+      "code": "county-vehicle",
+      "label": "County vehicle complaint",
+      "group": "other",
+      "subjects": [
+        "County Vehicle Complaint"
+      ],
+      "departments": [
+        "Internal Services"
+      ],
+      "sla": "10 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 94,
+        "openNow": 15,
+        "medianDaysToClose": 2.9,
+        "p90DaysToClose": 19.3
+      }
+    },
+    {
+      "code": "pet-store-complaint",
+      "label": "Breeder or pet store complaint",
+      "group": "animals",
+      "subjects": [
+        "Breeder or Pet Store Complaint"
+      ],
+      "departments": [
+        "Animal Services"
+      ],
+      "sla": "30 Calendar Days",
+      "subtypes": [
+        "Other",
+        "Animal Neglect",
+        "Animal Neglect, Other",
+        "Selling Animals without Current Permit",
+        "Animal Neglect, Dirty Shop",
+        "Animal Neglect, Dirty Shop, Other",
+        "Person or Establishment Breeding Cats / Dogs",
+        "Selling Animals without Current Health Certificate",
+        "Other, Selling Animals without Current Permit",
+        "Dirty Shop",
+        "Person or Establishment Breeding Cats / Dogs, Other",
+        "Person or Establishment Breeding Cats / Dogs, Selling Animals without Current Health Certificate, Selling Animals without Current Permit"
+      ],
+      "stats": {
+        "reports2026": 89,
+        "openNow": 1,
+        "medianDaysToClose": 4.2,
+        "p90DaysToClose": 18.0
+      }
+    },
+    {
+      "code": "bees",
+      "label": "Bee or wasp hive",
+      "group": "pests",
+      "subjects": [
+        "Bee And Wasp Control On Public Right Of Way - City of Miami",
+        "Bee Hives on Public Right of Way"
+      ],
+      "departments": [
+        "Transportation and Public Works",
+        "City of Miami Public Works"
+      ],
+      "sla": "7 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 79,
+        "openNow": 14,
+        "medianDaysToClose": 5.0,
+        "p90DaysToClose": 29.1
+      }
+    },
+    {
+      "code": "trash-hole",
+      "label": "Trash hole in roadway",
+      "group": "roads",
+      "subjects": [
+        "Trash Hole - City of Miami"
+      ],
+      "departments": [
+        "City of Miami Public Works"
+      ],
+      "sla": "60 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 73,
+        "openNow": 0,
+        "medianDaysToClose": 5.1,
+        "p90DaysToClose": 10.9
+      }
+    },
+    {
+      "code": "landscaper-complaint",
+      "label": "Landscaping contractor complaint",
+      "group": "trees",
+      "subjects": [
+        "Contractor Complaints - Landscaper"
+      ],
+      "departments": [
+        "Parks Recreation and Open Spaces"
+      ],
+      "sla": "7 Calendar Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 67,
+        "openNow": 0,
+        "medianDaysToClose": 4.3,
+        "p90DaysToClose": 27.1
+      }
+    },
+    {
+      "code": "swale-dropoff",
+      "label": "Swale or shoulder drop-off",
+      "group": "roads",
+      "subjects": [
+        "Swale Grading or Drop Off Repair - City of Miami"
+      ],
+      "departments": [
+        "City of Miami Public Works"
+      ],
+      "sla": "60 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 62,
+        "openNow": 8,
+        "medianDaysToClose": 6.0,
+        "p90DaysToClose": 15.1
+      }
+    },
+    {
+      "code": "trash-out-early",
+      "label": "Trash put out early",
+      "group": "waste",
+      "subjects": [
+        "Garbage, Trash or Recycling Placed Out Early  - City of Miami"
+      ],
+      "departments": [
+        "City of Miami Solid Waste"
+      ],
+      "sla": "7 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 55,
+        "openNow": 0,
+        "medianDaysToClose": 3.8,
+        "p90DaysToClose": 9.2
+      }
+    },
+    {
+      "code": "road-debris",
+      "label": "Debris blocking the road",
+      "group": "roads",
+      "subjects": [
+        "Road Debris Blocking Traffic or Right Of Way - City of Miami"
+      ],
+      "departments": [
+        "City of Miami Public Works"
+      ],
+      "sla": "14 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 43,
+        "openNow": 2,
+        "medianDaysToClose": 54.8,
+        "p90DaysToClose": 85.9
+      }
+    },
+    {
+      "code": "unpermitted-driveway",
+      "label": "Unpermitted driveway",
+      "group": "roads",
+      "subjects": [
+        "Driveway without a Permit"
+      ],
+      "departments": [
+        "Transportation and Public Works"
+      ],
+      "sla": "3 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 36,
+        "openNow": 31,
+        "medianDaysToClose": 49.0,
+        "p90DaysToClose": 111.1
+      }
+    },
+    {
+      "code": "dumpster-violation",
+      "label": "Dumpster violation",
+      "group": "waste",
+      "subjects": [
+        "Container Violation for Commercial or Multi-Family Property - City of Miami"
+      ],
+      "departments": [
+        "City of Miami Solid Waste"
+      ],
+      "sla": "7 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 11,
+        "openNow": 0,
+        "medianDaysToClose": 1.9,
+        "p90DaysToClose": 11.7
+      }
+    },
+    {
+      "code": "squatters",
+      "label": "Squatters",
+      "group": "property",
+      "subjects": [
+        "Squatters - City of Miami"
+      ],
+      "departments": [
+        "City of Miami Police"
+      ],
+      "sla": null,
+      "subtypes": [],
+      "stats": {
+        "reports2026": 9,
+        "openNow": 0,
+        "medianDaysToClose": 0.5,
+        "p90DaysToClose": 0.6
+      }
+    },
+    {
+      "code": "tree-removal-no-permit",
+      "label": "Tree removed without a permit",
+      "group": "trees",
+      "subjects": [
+        "Tree Removal Without Permit - City of Miami"
+      ],
+      "departments": [
+        "City of Miami Code Compliance"
+      ],
+      "sla": "3 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 7,
+        "openNow": 1,
+        "medianDaysToClose": 3.6,
+        "p90DaysToClose": 9.4
+      }
+    },
+    {
+      "code": "illegal-hauler",
+      "label": "Illegal commercial hauler",
+      "group": "waste",
+      "subjects": [
+        "Solid Waste Illegal Commercial Hauler - City of Miami"
+      ],
+      "departments": [
+        "City of Miami Solid Waste"
+      ],
+      "sla": "5 Business Days",
+      "subtypes": [],
+      "stats": {
+        "reports2026": 1,
+        "openNow": 0,
+        "medianDaysToClose": 0.2,
+        "p90DaysToClose": 0.2
+      }
+    },
+    {
+      "code": "inspector-complaint",
+      "label": "Building inspector complaint",
+      "group": "construction",
+      "subjects": [
+        "Building Customer Service or Inspector Complaint - City of Miami"
+      ],
+      "departments": [
+        "City of Miami Building"
+      ],
+      "sla": null,
+      "subtypes": [],
+      "stats": {
+        "reports2026": 1,
+        "openNow": 0,
+        "medianDaysToClose": 0.0,
+        "p90DaysToClose": 0.0
+      }
+    }
+  ]
+}

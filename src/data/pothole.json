@@ -1,0 +1,66 @@
+{
+  "code": "pothole",
+  "label": "Pothole or roadway defect",
+  "departments": [
+    "Transportation and Public Works",
+    "City of Miami Public Works"
+  ],
+  "source": "Miami-Dade County 311, Jan-Sep 2026 (6,104 reports)",
+  "subtypes": [
+    {
+      "code": "pothole",
+      "label": "Pothole",
+      "count": 4390,
+      "aliases311": [
+        "Potholes"
+      ]
+    },
+    {
+      "code": "worn-roadway",
+      "label": "Roadway is worn or has defects",
+      "count": 624,
+      "aliases311": [
+        "Roadway is Worn or has Defects"
+      ]
+    },
+    {
+      "code": "cave-in",
+      "label": "Cave-in or sinkhole",
+      "count": 108,
+      "aliases311": [
+        "Cave-in or Sinkhole"
+      ]
+    },
+    {
+      "code": "guardrail",
+      "label": "Guardrail or handrail is damaged",
+      "count": 20,
+      "aliases311": [
+        "Guardrail or Handrail is Damaged"
+      ]
+    },
+    {
+      "code": "fence",
+      "label": "Fence along roadway needs repair",
+      "count": 1,
+      "aliases311": [
+        "Fence along Roadway Needs Repair"
+      ]
+    }
+  ],
+  "sla": {
+    "Transportation and Public Works": "90 Business Days",
+    "City of Miami Public Works": "30 Business Days"
+  },
+  "stats": {
+    "reports": 6104,
+    "open": 2709,
+    "openRate": 0.44,
+    "duplicates": 1463,
+    "meanDaysToClose": 37.7,
+    "p25DaysToClose": 6.2,
+    "medianDaysToClose": 20.9,
+    "p75DaysToClose": 53.8,
+    "p90DaysToClose": 98.0
+  }
+}
