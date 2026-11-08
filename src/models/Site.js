@@ -66,6 +66,9 @@ const siteSchema = new mongoose.Schema(
         name: { type: String },
         note: { type: String },
         photoKey: { type: String },
+        // Demo data, not a real resident. Set only by scripts/seed-verifications.js
+        // so it can be told apart and removed without touching real answers.
+        seeded: { type: Boolean, default: false },
       },
     ],
     openCount: { type: Number, default: 0 },

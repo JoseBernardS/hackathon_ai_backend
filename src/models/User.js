@@ -4,6 +4,9 @@ const userSchema = new mongoose.Schema(
   {
     // The phone number is the identity. There is no password anywhere.
     phone: { type: String, required: true, unique: true, index: true },
+
+    // A demo account created by a seed script, never a real sign-up.
+    seeded: { type: Boolean, default: false, index: true },
     displayName: { type: String, trim: true },
 
     // Miami-Dade 311 requires a real first name, last name, email and phone on
