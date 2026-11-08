@@ -1,6 +1,22 @@
 const mongoose = require('mongoose');
 
 /**
+ * What the neighbourhood collectively says.
+ *
+ * `disputed` is a real answer, not a failure to decide — if two residents say
+ * it is fixed and two say it is not, showing "fixed" would be a lie and showing
+ * nothing would waste what they told us.
+ */
+function verdictOf(list = []) {
+  const yes = list.filter((v) => v.fixed).length;
+  const no = list.length - yes;
+  if (!list.length) return null;
+  if (yes > no) return 'fixed';
+  if (no > yes) return 'not_fixed';
+  return 'disputed';
+}
+
+/**
  * A deduplicated problem location, for any reportable category.
  *
  * Many reports — 311 history plus in-app submissions — collapse into one site,
@@ -30,6 +46,28 @@ const siteSchema = new mongoose.Schema(
     // a second report. Kept separate from reportCount so the two claims stay
     // honest: one is a photographed report, the other is a tap.
     endorsedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+
+    /**
+     * Community verification of a fix.
+     *
+     * The county closing a case means the agency considers the ticket done,
+     * which is not the same as the hole being gone: 25.1% of closed pothole
+     * cases in the 2026 export were re-reported at the same spot, 99 of them
+     * within a week. Residents are the only ones who can say which.
+     *
+     * One entry per resident, replaced if they change their mind.
+     */
+    verifications: [
+      {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        fixed: { type: Boolean, required: true },
+        at: { type: Date, required: true },
+        // Denormalised so "Confirmed fixed by Maria G." survives a rename.
+        name: { type: String },
+        note: { type: String },
+        photoKey: { type: String },
+      },
+    ],
     openCount: { type: Number, default: 0 },
     userReportCount: { type: Number, default: 0 },
 
@@ -89,6 +127,14 @@ siteSchema.set('toJSON', {
     ret.endorsementCount = (ret.endorsedBy || []).length;
     delete ret.endorsedBy;
     ret.totalVoices = (ret.reportCount || 0) + ret.endorsementCount;
+    // Counts and a verdict, never the raw list — who voted stays private.
+    const v = ret.verifications || [];
+    ret.verification = {
+      fixedCount: v.filter((x) => x.fixed).length,
+      notFixedCount: v.filter((x) => !x.fixed).length,
+      verdict: verdictOf(v),
+    };
+    delete ret.verifications;
     return ret;
   },
 });

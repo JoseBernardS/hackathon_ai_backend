@@ -264,6 +264,11 @@ async function analyzeDraft(req, res) {
     }),
   ]);
 
+  // Road ownership is deliberately NOT surfaced here. It routes the filing
+  // server-side — which county or city service code the case goes under — and
+  // the resident never sees it. They learn the outcome from `filedWith311`
+  // after they submit, not before.
+
   const a = verdict.available ? verdict.analysis : {};
   const draft = await ReportDraft.create({
     categoryCode: entry.code,
@@ -634,6 +639,66 @@ async function endorseSite(req, res) {
   });
 }
 
+
+/**
+ * POST /api/sites/:id/verify ὑ2 — "is it actually fixed?"
+ *
+ * The counterweight to the county's own record. A 311 case closing means the
+ * agency considers the ticket done; in the 2026 export 25.1% of closed pothole
+ * cases were re-reported at the same spot, 99 of them within a week. Only the
+ * people who walk past it can say which.
+ *
+ * One answer per resident, replaced if they change their mind. A photo is
+ * optional — a "still there" with a picture is worth more than one without,
+ * but demanding one would silence anyone without a camera to hand.
+ */
+async function verifySite(req, res) {
+  const site = await Site.findById(req.params.id);
+  if (!site) throw httpError(404, 'Site not found');
+
+  const fixed = parseBool(req.body.fixed);
+  if (fixed === undefined) {
+    throw httpError(400, 'Send fixed: true or fixed: false');
+  }
+
+  let photoKey;
+  if (req.file) {
+    const stored = await uploads.putObject(req.file, `verifications`);
+    photoKey = stored.key;
+  }
+
+  const entry = {
+    user: req.user._id,
+    fixed,
+    at: new Date(),
+    // Denormalised: "Confirmed fixed by Maria G." must survive a rename.
+    name: req.user.displayName || req.user.firstName || null,
+    note: req.body.note ? String(req.body.note).trim().slice(0, 500) : undefined,
+    photoKey,
+  };
+
+  const mine = (site.verifications || []).find((v) => String(v.user) === String(req.user._id));
+  const changed = Boolean(mine) && mine.fixed !== fixed;
+
+  // $pull then $push, so a resident who changes their mind replaces their
+  // answer rather than voting twice.
+  await Site.updateOne({ _id: site._id }, { $pull: { verifications: { user: req.user._id } } });
+  await Site.updateOne({ _id: site._id }, { $push: { verifications: entry } });
+
+  const fresh = await Site.findById(site._id);
+  const json = fresh.toJSON();
+
+  res.json({
+    siteId: String(fresh._id),
+    yourAnswer: fixed ? 'fixed' : 'not_fixed',
+    changedYourAnswer: changed,
+    ...json.verification,
+    // What the county claims, for the UI to show side by side with the above.
+    countyStatus: fresh.status,
+    photo: photoKey ? await uploads.presign(photoKey) : null,
+  });
+}
+
 // GET /api/sites/:id   — a site plus every report behind it
 async function getSite(req, res) {
   const site = await Site.findById(req.params.id).catch(() => null);
@@ -656,6 +721,44 @@ async function getSite(req, res) {
      * `youEndorsed` is false for a signed-out visitor, so the button renders
      * unpressed and the sign-in prompt happens on tap rather than on load.
      */
+    verification: {
+      ...json.verification,
+      // null when signed out, so the sign-in prompt fires on tap not on load.
+      yourAnswer: req.user
+        ? (() => {
+            const mine = (site.verifications || []).find(
+              (v) => String(v.user) === String(req.user._id)
+            );
+            return mine ? (mine.fixed ? 'fixed' : 'not_fixed') : null;
+          })()
+        : null,
+      // Names of the residents who said it is fixed — "Confirmed by Maria G."
+      confirmedBy: (site.verifications || [])
+        .filter((v) => v.fixed && v.name)
+        .slice(-3)
+        .map((v) => v.name),
+      /**
+       * The pictures residents attached, newest first.
+       *
+       * This is the point of allowing a photo at all: a "still there" with an
+       * image is evidence someone can hold up against the county's "Inspection
+       * Completed". Storing it and never showing it would be theatre.
+       */
+      evidence: await Promise.all(
+        (site.verifications || [])
+          .filter((v) => v.photoKey)
+          .slice(-6)
+          .reverse()
+          .map(async (v) => ({
+            says: v.fixed ? 'fixed' : 'not_fixed',
+            by: v.name || null,
+            at: v.at,
+            note: v.note || null,
+            photo: await uploads.presign(v.photoKey),
+          }))
+      ),
+      endpoint: `POST /api/sites/${site.id}/verify`,
+    },
     endorsement: {
       endorsementCount: (site.endorsedBy || []).length,
       totalVoices: site.reportCount + (site.endorsedBy || []).length,
@@ -672,4 +775,6 @@ async function getSite(req, res) {
   });
 }
 
-module.exports = { listSites, analyzeDraft, createReport, myReports, getSite, endorseSite };
+module.exports = {
+  listSites, analyzeDraft, createReport, myReports, getSite, endorseSite, verifySite,
+};
