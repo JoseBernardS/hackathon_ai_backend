@@ -17,7 +17,7 @@ const onboardingSchema = new mongoose.Schema(
   {
     status: {
       type: String,
-      enum: ['started', 'documents_pending', 'documents_uploaded', 'otp_sent', 'verified'],
+      enum: ['documents_pending', 'documents_uploaded', 'verified'],
       default: 'started',
       index: true,
     },
@@ -28,14 +28,6 @@ const onboardingSchema = new mongoose.Schema(
     phone: { type: String, index: true },
     displayName: { type: String, trim: true },
 
-    // OTP state. With Infobip only the pinId is kept; the local fallback
-    // stores an HMAC of the code. Neither stores the code itself.
-    otpRef: { type: String, select: false },
-    otpHash: { type: String, select: false },
-    otpProvider: String,
-    otpExpiresAt: Date,
-    otpAttempts: { type: Number, default: 0 },
-    otpSentAt: Date,
 
     verifiedAt: Date,
   },
@@ -46,11 +38,9 @@ onboardingSchema.methods.hasAllDocuments = function hasAllDocuments() {
   return Boolean(this.selfie?.key && this.idDocument?.key);
 };
 
-// Keeps OTP internals out of every API response.
+// Keeps internals out of every API response.
 onboardingSchema.set('toJSON', {
   transform(doc, ret) {
-    delete ret.otpHash;
-    delete ret.otpRef;
     delete ret.__v;
     return ret;
   },

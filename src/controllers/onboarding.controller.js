@@ -1,7 +1,6 @@
 const Onboarding = require('../models/Onboarding');
 const uploads = require('../services/upload.service');
 const User = require('../models/User');
-const { provider, issueCode } = require('../services/otp');
 const { authPayload } = require('./auth.controller');
 
 // Accepts +15551234567 style numbers. Kept permissive on purpose.
@@ -26,11 +25,8 @@ function httpError(status, message) {
   return err;
 }
 
-async function loadSession(id, withOtp = false) {
-  const query = Onboarding.findById(id);
-  if (withOtp) query.select('+otpHash +otpRef');
-
-  const session = await query;
+async function loadSession(id) {
+  const session = await Onboarding.findById(id);
   if (!session) throw httpError(404, 'Onboarding session not found');
   return session;
 }
@@ -94,101 +90,55 @@ async function uploadDocuments(req, res) {
   });
 }
 
-// POST /api/onboarding/:id/phone — step 3, store the number and send the code
+/**
+ * POST /api/onboarding/:id/phone — the last step.
+ *
+ * Takes the phone number and finishes the sign-up: creates or updates the
+ * account, attaches the uploaded documents, and returns a token. There is no
+ * code to send or check.
+ */
 async function submitPhone(req, res) {
-  const session = await loadSession(req.params.id, true);
+  const session = await loadSession(req.params.id);
 
-  const phone = String(req.body?.phone || '').trim();
+  const phone = String(req.body.phone || '').trim();
   if (!E164.test(phone)) {
-    throw httpError(400, 'phone must be in E.164 format, e.g. +13055551234');
+    throw httpError(400, 'phone must be E.164, e.g. +13055551234');
   }
 
   if (!session.hasAllDocuments()) {
-    throw httpError(409, 'Upload both the selfie and the ID document first');
+    throw httpError(409, 'Upload the selfie and the ID photo first');
+  }
+  if (session.status === 'verified') {
+    throw httpError(409, 'This session is already complete');
   }
 
-  if (session.status === 'verified') throw httpError(409, 'Session is already verified');
-
-  const displayName = parseDisplayName(req.body?.displayName);
-  if (displayName) session.displayName = displayName;
+  const displayName = parseDisplayName(req.body.displayName);
+  const firstName = parseDisplayName(req.body.firstName);
+  const lastName = parseDisplayName(req.body.lastName);
+  const email = req.body.email ? String(req.body.email).trim().toLowerCase() : undefined;
 
   session.phone = phone;
-  const result = await issueCode(session, session.phone);
-  session.status = 'otp_sent';
-  await session.save();
-
-  res.json({
-    sessionId: session.id,
-    status: session.status,
-    phone: session.phone,
-    displayName: session.displayName,
-    expiresAt: session.otpExpiresAt,
-    ...result,
-    next: 'POST /api/onboarding/:id/verify with { "code": "123456" }',
-  });
-}
-
-// POST /api/onboarding/:id/resend
-async function resendCode(req, res) {
-  const session = await loadSession(req.params.id, true);
-
-  if (!session.phone) throw httpError(409, 'No phone number on this session yet');
-  if (session.status === 'verified') throw httpError(409, 'Session is already verified');
-
-  const result = await issueCode(session, session.phone);
-  session.status = 'otp_sent';
-  await session.save();
-
-  res.json({
-    sessionId: session.id,
-    status: session.status,
-    expiresAt: session.otpExpiresAt,
-    ...result,
-  });
-}
-
-// POST /api/onboarding/:id/verify — step 4
-async function verifyCode(req, res) {
-  const session = await loadSession(req.params.id, true);
-
-  const code = String(req.body?.code || '').trim();
-  if (!code) throw httpError(400, 'code is required');
-
-  const displayName = parseDisplayName(req.body?.displayName);
   if (displayName) session.displayName = displayName;
-
-  if (session.status === 'verified') {
-    throw httpError(409, 'Already verified. Sign in with POST /api/auth/otp/request');
-  }
-
-  const result = await provider.verify(session, code);
-
-  if (!result.ok) {
-    throw httpError(result.status || 401, result.reason || 'Incorrect code');
-  }
-
   session.status = 'verified';
   session.verifiedAt = new Date();
-  session.otpHash = undefined;
-  session.otpRef = undefined;
-  session.otpExpiresAt = undefined;
-  session.otpAttempts = 0;
   await session.save();
 
-  // Onboarding doubles as sign-up: the verified number becomes the account,
-  // and the caller is signed in straight away.
+  // One account per phone number; a repeat sign-up updates the existing one.
   const user = await User.findOneAndUpdate(
-    { phone: session.phone },
+    { phone },
     {
       $set: {
         onboardingId: session.id,
         ...(session.displayName ? { displayName: session.displayName } : {}),
-        selfieKey: session.selfie?.key,
-        idDocumentKey: session.idDocument?.key,
+        ...(firstName ? { firstName } : {}),
+        ...(lastName ? { lastName } : {}),
+        ...(email ? { email } : {}),
+        selfieKey: session.selfie && session.selfie.key,
+        idDocumentKey: session.idDocument && session.idDocument.key,
         verifiedAt: session.verifiedAt,
         lastLoginAt: new Date(),
       },
-      $setOnInsert: { phone: session.phone },
+      $setOnInsert: { phone },
     },
     { new: true, upsert: true, setDefaultsOnInsert: true }
   );
@@ -214,4 +164,4 @@ async function getSession(req, res) {
   res.json(body);
 }
 
-module.exports = { start, uploadDocuments, submitPhone, resendCode, verifyCode, getSession };
+module.exports = { start, uploadDocuments, submitPhone, getSession };

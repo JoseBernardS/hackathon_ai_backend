@@ -1,6 +1,4 @@
 const User = require('../models/User');
-const OtpChallenge = require('../models/OtpChallenge');
-const { provider, issueCode } = require('../services/otp');
 const { signToken, EXPIRES_IN } = require('../services/token.service');
 
 const E164 = /^\+[1-9]\d{7,14}$/;
@@ -14,7 +12,7 @@ function httpError(status, message) {
 function normalizePhone(raw) {
   const phone = String(raw || '').trim();
   if (!E164.test(phone)) {
-    throw httpError(400, 'phone must be in E.164 format, e.g. +13055551234');
+    throw httpError(400, 'phone must be E.164, e.g. +13055551234');
   }
   return phone;
 }
@@ -28,56 +26,18 @@ function authPayload(user) {
   };
 }
 
-// POST /api/auth/otp/request — step 1 of sign-in
-async function requestOtp(req, res) {
-  const phone = normalizePhone(req.body?.phone);
+// POST /api/auth/login   { phone }
+// Returning users sign in with the number they signed up with.
+async function login(req, res) {
+  const phone = normalizePhone(req.body.phone);
 
   const user = await User.findOne({ phone });
   if (!user) {
-    throw httpError(404, 'No account for this number. Complete onboarding first');
+    throw httpError(404, 'No account for that number — sign up first');
   }
-  if (user.status !== 'active') throw httpError(403, 'Account suspended');
-
-  // Reuse a live challenge so the resend cooldown is actually enforced.
-  let challenge = await OtpChallenge.findOne({ phone, consumedAt: null })
-    .sort({ createdAt: -1 })
-    .select('+otpHash +otpRef');
-
-  if (!challenge) challenge = await OtpChallenge.create({ phone });
-
-  const result = await issueCode(challenge, phone);
-
-  res.json({
-    challengeId: challenge.id,
-    phone,
-    expiresAt: challenge.otpExpiresAt,
-    ...result,
-    next: 'POST /api/auth/otp/verify with { "phone", "code" }',
-  });
-}
-
-// POST /api/auth/otp/verify — step 2, returns the token
-async function verifyOtp(req, res) {
-  const phone = normalizePhone(req.body?.phone);
-  const code = String(req.body?.code || '').trim();
-  if (!code) throw httpError(400, 'code is required');
-
-  const challenge = await OtpChallenge.findOne({ phone, consumedAt: null })
-    .sort({ createdAt: -1 })
-    .select('+otpHash +otpRef');
-
-  if (!challenge) throw httpError(409, 'No code has been sent for this number');
-
-  const result = await provider.verify(challenge, code);
-  if (!result.ok) throw httpError(result.status || 401, result.reason || 'Incorrect code');
-
-  challenge.consumedAt = new Date();
-  challenge.otpHash = undefined;
-  challenge.otpRef = undefined;
-  await challenge.save();
-
-  const user = await User.findOne({ phone });
-  if (!user) throw httpError(404, 'No account for this number');
+  if (user.status !== 'active') {
+    throw httpError(403, `Account is ${user.status}`);
+  }
 
   user.lastLoginAt = new Date();
   await user.save();
@@ -90,11 +50,12 @@ async function me(req, res) {
   res.json(req.user.toJSON());
 }
 
-// POST /api/auth/logout — invalidates every token issued so far
+// POST /api/auth/logout
+// Bumps tokenVersion, which invalidates every token issued so far.
 async function logout(req, res) {
   req.user.tokenVersion += 1;
   await req.user.save();
   res.json({ loggedOut: true });
 }
 
-module.exports = { requestOtp, verifyOtp, me, logout, authPayload };
+module.exports = { login, me, logout, authPayload, normalizePhone };

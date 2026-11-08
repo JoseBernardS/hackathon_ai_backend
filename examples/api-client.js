@@ -67,16 +67,15 @@ export const onboarding = {
     return request(`/api/onboarding/${sessionId}/documents`, { method: 'POST', form });
   },
 
-  submitPhone: (sessionId, phone) =>
-    request(`/api/onboarding/${sessionId}/phone`, { method: 'POST', body: { phone } }),
-
-  resend: (sessionId) => request(`/api/onboarding/${sessionId}/resend`, { method: 'POST' }),
-
-  // Stores the token on success: the user is signed in from here.
-  verify: async (sessionId, code) => {
-    const data = await request(`/api/onboarding/${sessionId}/verify`, {
+  /**
+   * The last step: the phone number finishes the sign-up and returns a token.
+   * `firstName`, `lastName` and `email` are optional here but required before
+   * a report can be filed with 311, so collect them now if you can.
+   */
+  finish: async (sessionId, { phone, displayName, firstName, lastName, email } = {}) => {
+    const data = await request(`/api/onboarding/${sessionId}/phone`, {
       method: 'POST',
-      body: { code },
+      body: { phone, displayName, firstName, lastName, email },
     });
     auth.set(data.token);
     return data;
@@ -88,10 +87,9 @@ export const onboarding = {
 // --- login (returning users) ------------------------------------------------
 
 export const login = {
-  requestCode: (phone) => request('/api/auth/otp/request', { method: 'POST', body: { phone } }),
-
-  verify: async (phone, code) => {
-    const data = await request('/api/auth/otp/verify', { method: 'POST', body: { phone, code } });
+  // Stores the token on success: the user is signed in from here.
+  withPhone: async (phone) => {
+    const data = await request('/api/auth/login', { method: 'POST', body: { phone } });
     auth.set(data.token);
     return data;
   },

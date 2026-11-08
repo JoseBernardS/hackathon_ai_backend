@@ -18,10 +18,12 @@
     "guardrail": "Potholes",
     "fence": "Potholes"
   },
-  "eligibleMunicipalities": [
-    "UNINCORPORATED MIAMI-DADE",
-    "MIAMI"
-  ],
   "_photos": "The county's createServiceRequest does not accept images. Photos stay in our S3 and are shown next to the county record in our own UI. Do not try to attach them.",
-  "_description": "The specced payload has no free-text field, so a resident's description does not currently reach the county either. Dynamic_Questions is the likely home for it \u2014 confirm against the real service definition before assuming it is lost."
+  "_description": "The specced payload has no free-text field, so a resident's description does not currently reach the county either. Dynamic_Questions is the likely home for it \u2014 confirm against the real service definition before assuming it is lost.",
+  "serviceCodeByRoadOwner": {
+    "county": "PWROADWY",
+    "city:MIAMI": "COMPWPH",
+    "_note": "MAINTCODE decides the owner. CO/CM/CC -> county -> PWROADWY. CI -> city; only City of Miami has a service code on this portal (COMPWPH). Any other city maintains its own intake and we do not file."
+  },
+  "_eligibility": "Authoritative test is the Road Maintenance layer's MAINTCODE, not the municipality name. See src/services/roadmaint.service.js."
 }

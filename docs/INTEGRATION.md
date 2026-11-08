@@ -8,11 +8,8 @@ Base `http://localhost:4000`. JSON throughout. 🔒 means
 ```
 POST /api/onboarding                    open a sign-up session
 POST /api/onboarding/:id/documents      selfie + ID photo
-POST /api/onboarding/:id/phone          sends the OTP
-POST /api/onboarding/:id/resend         resend it
-POST /api/onboarding/:id/verify         verify -> account + token
-POST /api/auth/otp/request              returning user, step 1
-POST /api/auth/otp/verify               returning user, step 2 -> token
+POST /api/onboarding/:id/phone          finish -> account + token
+POST /api/auth/login                    returning user -> token
 GET  /api/auth/me                 🔒    current user
 POST /api/auth/logout             🔒    revoke every token
 
@@ -38,126 +35,144 @@ VITE_API_URL=http://localhost:4000
 
 # Part 1 — Sign up and sign in
 
-No passwords. Identity is a phone number plus a one-time code; a selfie and an
-ID photo are captured during sign-up and stored in S3.
+## What is actually required
+
+**Sign up — three calls.**
+
+| # | call | required |
+|---|---|---|
+| 1 | `POST /api/onboarding` | nothing |
+| 2 | `POST /api/onboarding/:id/documents` | `selfie` **and** `idDocument` |
+| 3 | `POST /api/onboarding/:id/phone` | `phone` |
+
+**Sign in — one call.**
+
+| call | required |
+|---|---|
+| `POST /api/auth/login` | `phone` |
+
+That is the whole of it. No password, no code to type.
+
+**Collect these at step 3 too** — optional for sign-up, but **311 will not
+accept a report without them**:
+
+```
+firstName     goes to the county on every filed ticket
+lastName
+email
+displayName   optional, cosmetic
+```
 
 Tokens are JWTs, last 7 days, and go in `Authorization: Bearer <token>`.
-`POST /api/auth/logout` revokes every token issued so far, so a 401 on any 🔒
-call means the session is gone — clear it and send the user to login.
+`POST /api/auth/logout` revokes every token for that user, so a 401 on any 🔒
+call means the session is gone — clear it and send them to login.
+
+---
 
 ## `POST /api/onboarding`
 
 No body. **201**
 
 ```json
-{ "sessionId": "6aef80e59474f038711199ba", "status": "documents_pending" }
+{ "sessionId": "6af021d93864c985b9fe26d2", "status": "documents_pending" }
 ```
 
 ## `POST /api/onboarding/:id/documents`
 
-`multipart/form-data`, fields **`selfie`** and **`idDocument`**. Either or both,
-across one or more calls.
+`multipart/form-data`, fields **`selfie`** and **`idDocument`**. Images only,
+15MB each. Send both at once or one per call.
 
 **200**
 
 ```json
-{ "sessionId": "6aef80e5...", "status": "documents_uploaded",
-  "selfie": { "key": "onboarding/.../selfie/....png", "uploadedAt": "..." },
-  "idDocument": { "key": "onboarding/.../id/....png", "uploadedAt": "..." } }
-```
-
-## `POST /api/onboarding/:id/phone`
-
-```json
-{ "phone": "+13055551234", "displayName": "sel sed" }
-```
-
-Phone must be E.164 — leading `+`, country code, no spaces or dashes. Use
-`toE164()` from the client. `displayName` is optional, max 50 chars.
-
-**200**
-
-```json
-{ "sessionId": "6aef80e5...", "status": "otp_sent", "phone": "+13055551234",
-  "expiresAt": "2026-11-07T19:54:58.942Z", "provider": "infobip",
-  "smsSimulated": false }
+{ "sessionId": "6af021d9...", "status": "documents_uploaded",
+  "selfie": { "key": "onboarding/.../selfie/....jpg", "uploadedAt": "..." },
+  "idDocument": { "key": "onboarding/.../id/....jpg", "uploadedAt": "..." } }
 ```
 
 | code | |
 |---|---|
-| 400 | phone missing or not E.164, or `displayName` over 50 chars |
-| 409 | documents not uploaded yet, or already verified |
-| 429 | resend inside the 60-second cooldown |
+| 400 | a non-image file |
+| 404 | unknown session |
+| 413 | over 15MB |
 
-When Infobip is unconfigured the response also carries `devCode` and
-`smsSimulated: true`. **Never render `devCode`** — treat its presence as
-development-only.
+## `POST /api/onboarding/:id/phone`
 
-## `POST /api/onboarding/:id/resend`
-
-No body. Same response. 429 inside the 60-second cooldown.
-
-## `POST /api/onboarding/:id/verify`
+The last step. Creates the account and signs the user in.
 
 ```json
-{ "code": "123456" }
+{ "phone": "+13055550101",
+  "displayName": "Ada L",
+  "firstName": "Ada",
+  "lastName": "Lovelace",
+  "email": "ada@example.com" }
 ```
 
-**200** — creates the account and signs the user in.
+`phone` must be E.164 — leading `+`, country code, no spaces or dashes. Use
+`toE164()` from the client. Everything else is optional.
+
+**200**
 
 ```json
 {
-  "sessionId": "6aef80e5...",
+  "sessionId": "6af021d9...",
   "status": "verified",
-  "verifiedAt": "2026-11-07T19:49:58.510Z",
+  "verifiedAt": "2026-11-08T08:14:02.118Z",
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "tokenType": "Bearer",
   "expiresIn": "7d",
   "user": {
-    "_id": "6aef950939b04d88a8e96687",
-    "phone": "+13052842932",
+    "_id": "6af021da3864c985b9fe26d5",
+    "phone": "+13055550101",
     "status": "active",
-    "displayName": "sel sed",
-    "firstName": "sel",
-    "lastName": "sed",
-    "email": "selasisedalo@gmail.com",
-    "selfieKey": "onboarding/.../selfie/....png",
-    "idDocumentKey": "onboarding/.../id/....png",
-    "verifiedAt": "2026-11-07T19:49:58.510Z",
-    "lastLoginAt": "2026-11-07T21:15:53.092Z"
+    "displayName": "Ada L",
+    "firstName": "Ada",
+    "lastName": "Lovelace",
+    "email": "ada@example.com",
+    "selfieKey": "onboarding/.../selfie/....jpg",
+    "idDocumentKey": "onboarding/.../id/....jpg",
+    "verifiedAt": "2026-11-08T08:14:02.118Z",
+    "lastLoginAt": "2026-11-08T08:14:02.118Z"
   }
 }
 ```
 
 | code | |
 |---|---|
-| 400 | `code` missing |
-| 401 | wrong code — the message includes attempts remaining |
-| 409 | no code sent yet, or already verified |
-| 410 | code expired |
-| 429 | too many wrong attempts |
+| 400 | `phone` missing or not E.164, or `displayName` over 50 chars |
+| 409 | documents not uploaded yet, or the session is already complete |
+| 404 | unknown session |
 
-Store `token` and you are done. The client's `onboarding.verify()` does this.
+One account per phone number — signing up again with the same number updates
+the existing account rather than creating a second.
 
-## `GET /api/onboarding/:id`
-
-Session status, with presigned links to the uploaded documents. Use it to resume
-an interrupted sign-up.
-
-## Returning users
-
-```
-POST /api/auth/otp/request   { "phone": "+13052842932" }
-POST /api/auth/otp/verify    { "phone": "+13052842932", "code": "123456" }
+```js
+const { sessionId } = await onboarding.start();
+await onboarding.uploadDocuments(sessionId, { selfie, idDocument });
+await onboarding.finish(sessionId, {
+  phone: toE164('305 555 0101'),
+  firstName: 'Ada', lastName: 'Lovelace', email: 'ada@example.com',
+});
+// token is stored; the user is signed in
 ```
 
-`verify` returns the same `{ token, tokenType, expiresIn, user }` block.
+## `POST /api/auth/login`
+
+```json
+{ "phone": "+13055550101" }
+```
+
+**200** — the same `{ token, tokenType, expiresIn, user }` block as above.
 
 | code | |
 |---|---|
 | 400 | phone missing or not E.164 |
 | 404 | no account for that number — send them to sign-up |
-| 401 / 410 / 429 | wrong code / expired / too many attempts |
+| 403 | account is suspended |
+
+```js
+await login.withPhone(toE164('305 555 0101'));
+```
 
 ## `GET /api/auth/me` 🔒
 
@@ -167,16 +182,9 @@ The `user` object above.
 
 `{ "loggedOut": true }`. Revokes **every** token for that user.
 
-### 311 needs a real name and email
-
-Filing with the county requires `firstName`, `lastName`, `email` and `phone` on
-the account. Without them `POST /api/reports` returns:
-
-```json
-{ "error": "311 requires firstName, lastName, email on the account before a ticket can be filed" }
-```
-
-Collect them before the first report, or the filing silently cannot happen.
+> **This is not real authentication.** Anyone who knows a phone number can sign
+> in as that person. It is fine for a demo; re-adding a one-time code is the fix,
+> and the code for it is parked in `_parked/otp/`.
 
 ---
 
@@ -261,7 +269,7 @@ so this is what you put pins on.
     "municipality": "UNINCORPORATED MIAMI-DADE",
     "department": "Transportation and Public Works",
     "sla": "90 Business Days",
-    "canFileWith311": true,
+    "canFileWith311": null,
 
     "latestCaseNumber": "26-00247866",
     "caseNumbers": ["26-00247866", "26-00242655", "..."],
@@ -314,7 +322,7 @@ City of Miami pothole (30 business days) crosses sooner than a county one (90).
 | `radiusMeters` | number \| null | echoes the radius used |
 | `daysOpen` | number \| null | age of the oldest still-open report |
 | `reportCount` | number | how many complaints collapsed into this pin |
-| `canFileWith311` | boolean | false where the city, not the county, maintains the road |
+| `canFileWith311` | null | on the list feed; the detail call does the real lookup |
 | `caseNumbers` | string[] | newest first, up to 30 |
 | `photos` / `thumbnails` | string[] | presigned, **expire in 15 minutes** |
 
@@ -553,9 +561,31 @@ separate submit step.
 
 A 311 failure never fails the report — it comes back in `reason`.
 
-Check `site.canFileWith311` before promising the user the county will see it.
-Of the 40 demo sites, 37 are county-maintained; Coral Gables and Miami Shores
-run their own roads.
+`GET /api/sites/:id` carries `roadOwnership` — the authoritative answer from
+the county's own Road Maintenance layer:
+
+```json
+"roadOwnership": {
+  "eligible": true,
+  "serviceCode": "PWROADWY",
+  "street": "SW 128TH ST",
+  "maintCode": "CO",
+  "maintLabel": "County maintained",
+  "roadOwner": "county",
+  "municipality": "UNINCORPORATED MIAMI-DADE",
+  "municipalities": ["UNINCORPORATED MIAMI-DADE"],
+  "reason": "SW 128TH ST is county maintained — filed under PWROADWY",
+  "basis": "road_maintenance_layer",
+  "authoritativeCheckAvailable": true
+}
+```
+
+`maintCode` decides everything: `CO` / `CM` / `CC` are county-maintained and
+file under `PWROADWY`; `CI` is city-maintained and only City of Miami has a
+service code here (`COMPWPH`); `SR` is state (FDOT) and 311 does not take it.
+
+`basis` is `road_maintenance_layer` when the lookup succeeded, or
+`municipality_fallback` when the map service was unreachable.
 
 `located.method` is `nearest_311_record` or `none`; `confident` is true within
 200m. The county will not accept a ticket without a municipality.
@@ -588,9 +618,9 @@ display-ready.
 | 404 | `{ "error": "Unknown category \"nonsense\"" }` |
 | 404 | `{ "error": "Category \"graffiti\" exists in the 311 data but is not enabled yet" }` |
 | 404 | `{ "error": "Site not found" }` |
-| 410 | OTP expired |
+| 404 | `{ "error": "No account for that number — sign up first" }` |
+| 409 | `{ "error": "Upload the selfie and the ID photo first" }` |
 | 413 | photo over 15MB |
-| 429 | OTP resend cooldown, or too many wrong attempts |
 
 The two 404s differ on purpose: the second means *coming soon*, not a typo.
 

@@ -84,7 +84,9 @@ async function withThumbs(doc, { maxThumbs = 3, ticketsBySite, entry } = {}) {
   // Six ready-to-render strings, so a pin needs no client-side logic.
   json.display = describeSite(json, ticketsBySite ? ticketsBySite.get(String(json.id)) : null, entry);
   // Whether the county would accept a ticket here — a field, not an endpoint.
-  json.canFileWith311 = mdc311.checkEligibility(json).eligible;
+  // Road-ownership lookup is a network call, so the list feed reports what we
+  // can know locally and the detail call does the authoritative check.
+  json.canFileWith311 = null;
   return json;
 }
 
@@ -324,7 +326,7 @@ async function getSite(req, res) {
   res.json({
     ...json,
     display: describeSite(json, ticket, categories.get(site.categoryCode)),
-    canFileWith311: mdc311.checkEligibility(json).eligible,
+    roadOwnership: await mdc311.checkEligibility(json),
     // The county's own view of the case, folded in here rather than behind a
     // separate tickets endpoint. Null when no ticket has been filed.
     progress: ticket ? countyProgress(ticket) : null,

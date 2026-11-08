@@ -15,6 +15,7 @@
 const crypto = require('crypto');
 
 const client = require('./mdc311.client');
+const { lookupRoad } = require('./roadmaint.service');
 const Report = require('../models/Report');
 const Site = require('../models/Site');
 const ExternalTicket = require('../models/ExternalTicket');
@@ -30,33 +31,67 @@ const LOOKUP_CACHE_MS = 10 * 60 * 1000; // spec: cache lookups 10 minutes
 /* ------------------------------ eligibility ------------------------------ */
 
 /**
- * Can this site be filed with the county at all?
+ * Who maintains this road, and therefore whether we can file it and under
+ * which service code.
  *
- * The spec's authoritative test is MAINTCODE = CO on the nearest Street
- * Maintenance segment. We do not have that layer, so this uses the
- * municipality already on the site — which is the spec's own fallback test and
- * is correct for the common case. A site in an incorporated city other than
- * Miami belongs to that city, not the county.
+ * Reads the county's own Road Maintenance layer. The municipality name is only
+ * a fallback for when that service is unreachable, and it is marked as such —
+ * it was wrong in both directions: a Coral Gables street is MAINTCODE "CM"
+ * (county maintained within city) so the county does take it, and a City of
+ * Miami street is "CI" so the county does not.
  */
-function checkEligibility(site) {
-  const muni = (site.municipality || '').toUpperCase();
-  const eligible = config.eligibleMunicipalities.includes(muni);
+async function checkEligibility(site) {
+  const road = await lookupRoad(site.location.coordinates);
 
+  if (road.available && road.maintCode) {
+    const muni = (road.municipalities[0] || site.municipality || '').toUpperCase();
+    const serviceCode =
+      road.owner === 'county'
+        ? config.serviceCodeByRoadOwner.county
+        : road.owner === 'city'
+          ? config.serviceCodeByRoadOwner[`city:${muni}`] || null
+          : null;
+
+    return {
+      eligible: Boolean(serviceCode),
+      serviceCode,
+      municipality: road.municipalities[0] || site.municipality || null,
+      municipalities: road.municipalities,
+      street: road.street,
+      maintCode: road.maintCode,
+      maintLabel: road.maintLabel,
+      roadOwner: road.owner,
+      reason: serviceCode
+        ? `${road.street || 'This road'} is ${road.maintLabel.toLowerCase()} — filed under ${serviceCode}`
+        : `${road.street || 'This road'} is ${road.maintLabel.toLowerCase()} — 311 does not accept it`,
+      basis: 'road_maintenance_layer',
+      authoritativeCheckAvailable: true,
+    };
+  }
+
+  // Fallback: the map service is down. County-served municipalities only.
+  const muni = (site.municipality || '').toUpperCase();
+  const eligible = muni === 'UNINCORPORATED MIAMI-DADE';
   return {
     eligible,
+    serviceCode: eligible ? config.serviceCodeByRoadOwner.county : null,
     municipality: site.municipality || null,
-    reason: eligible
-      ? `${site.municipality} is served by Miami-Dade County for roadway requests`
-      : `${site.municipality || 'Unknown municipality'} maintains its own roads — this belongs to the city, not the county`,
-    // Flagged so nobody mistakes the fallback for the real thing.
-    basis: 'municipality',
+    municipalities: [],
+    street: null,
+    maintCode: null,
+    maintLabel: null,
+    roadOwner: 'unknown',
+    reason: road.error
+      ? `Road maintenance lookup unavailable (${road.error}); falling back to municipality`
+      : 'No road segment found within 30m of this point',
+    basis: 'municipality_fallback',
     authoritativeCheckAvailable: false,
   };
 }
 
 /* -------------------------------- payload -------------------------------- */
 
-function buildPayload({ site, report, user }) {
+function buildPayload({ site, report, user, serviceCode = config.serviceCode }) {
   const [lng, lat] = site.location.coordinates;
   const attribute = { ...config.attributeDefaults };
 
@@ -64,7 +99,7 @@ function buildPayload({ site, report, user }) {
   if (mapped) attribute['01PL-ROADWAYISSUE'] = mapped;
 
   return {
-    service_code: config.serviceCode,
+    service_code: serviceCode,
     attribute,
     reported_lat: lat,
     reported_lng: lng,
@@ -90,7 +125,7 @@ function missingContactFields(user) {
 /* -------------------------------- submit --------------------------------- */
 
 async function submitReport({ report, site, user }) {
-  const eligibility = checkEligibility(site);
+  const eligibility = await checkEligibility(site);
   if (!eligibility.eligible) {
     return { skipped: true, eligibility };
   }
@@ -105,7 +140,7 @@ async function submitReport({ report, site, user }) {
   // One ticket per report, ever. The key is derived, so a retry collides.
   const submissionKey = crypto
     .createHash('sha256')
-    .update(`mdc311|${config.serviceCode}|${report._id}`)
+    .update(`mdc311|${eligibility.serviceCode}|${report._id}`)
     .digest('hex')
     .slice(0, 32);
 
@@ -114,7 +149,7 @@ async function submitReport({ report, site, user }) {
     return { alreadySubmitted: true, ticket: existing, eligibility };
   }
 
-  const payload = buildPayload({ site, report, user });
+  const payload = buildPayload({ site, report, user, serviceCode: eligibility.serviceCode });
 
   // Written BEFORE the POST: if the response is lost, the row is still here.
   const ticket =
@@ -125,7 +160,7 @@ async function submitReport({ report, site, user }) {
       reportId: report._id,
       siteId: site._id,
       submittedBy: user._id,
-      serviceCode: config.serviceCode,
+      serviceCode: eligibility.serviceCode,
       serviceName: config.serviceName,
       status: 'pending',
       requestPayload: payload,

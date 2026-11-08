@@ -25,8 +25,6 @@ const router = express.Router();
 router.post('/', asyncHandler(ctrl.start));
 router.post('/:id/documents', documents, asyncHandler(ctrl.uploadDocuments));
 router.post('/:id/phone', asyncHandler(ctrl.submitPhone));
-router.post('/:id/resend', asyncHandler(ctrl.resendCode));
-router.post('/:id/verify', asyncHandler(ctrl.verifyCode));
 router.get('/:id', asyncHandler(ctrl.getSession));
 
 module.exports = router;
