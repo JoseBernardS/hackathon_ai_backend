@@ -2,7 +2,6 @@
   "serviceCode": "PWROADWY",
   "serviceName": "Potholes",
   "_verified": "service_code and service_name confirmed against the live getServiceTypes catalog, 2026-11-08",
-  "_unverified": "the attribute keys below came from the integration spec and are NOT confirmed. The live service definition method name is unknown, so they could not be checked. Capture getServiceDefinition's real name, fetch the schema, and reconcile before turning DRY_RUN off.",
   "department": "Transportation and Public Works",
   "category": "Roadways and Canals",
   "attributeDefaults": {
@@ -13,10 +12,10 @@
   },
   "subTypeToAttribute": {
     "pothole": "Potholes",
-    "worn-roadway": "Potholes",
-    "cave-in": "Potholes",
-    "guardrail": "Potholes",
-    "fence": "Potholes"
+    "worn-roadway": "Roadway is Worn or has Defects",
+    "cave-in": "Cave-in or Sinkhole",
+    "guardrail": "Guardrail or Handrail is Damaged",
+    "fence": "Fence along Roadway Needs Repair"
   },
   "_photos": "The county's createServiceRequest does not accept images. Photos stay in our S3 and are shown next to the county record in our own UI. Do not try to attach them.",
   "_description": "The specced payload has no free-text field, so a resident's description does not currently reach the county either. Dynamic_Questions is the likely home for it \u2014 confirm against the real service definition before assuming it is lost.",
@@ -25,5 +24,6 @@
     "city:MIAMI": "COMPWPH",
     "_note": "MAINTCODE decides the owner. CO/CM/CC -> county -> PWROADWY. CI -> city; only City of Miami has a service code on this portal (COMPWPH). Any other city maintains its own intake and we do not file."
   },
-  "_eligibility": "Authoritative test is the Road Maintenance layer's MAINTCODE, not the municipality name. See src/services/roadmaint.service.js."
+  "_eligibility": "Authoritative test is the Road Maintenance layer's MAINTCODE, not the municipality name. See src/services/roadmaint.service.js.",
+  "_attributeProvenance": "The four 01PL-* keys and their defaults are confirmed from a successful live submission, not inferred. subTypeToAttribute uses the dataset SubType strings, which match the 01PL-ROADWAYISSUE option keys where checked (\"Potholes\"). Still unverified: the service-definition method name, so the full option list has never been fetched. Reconcile subTypeToAttribute against attributes[].values[].key once it is."
 }

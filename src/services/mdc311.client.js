@@ -197,10 +197,61 @@ function getServiceDefinition(serviceCode, language = 'EN') {
  */
 async function createServiceRequest(payload) {
   if (DRY_RUN) {
-    return { dryRun: true, wouldSend: { method: METHODS.createRequest, params: [payload] } };
+    return {
+      dryRun: true,
+      wouldSend: { method: METHODS.createRequest, params: [payload] },
+      response: simulatedResponse(payload),
+    };
   }
   const out = await call(METHODS.createRequest, [payload]);
   return { dryRun: false, response: out };
+}
+
+/**
+ * A stand-in for the county's reply, shaped exactly like the real one.
+ *
+ * The flow downstream of the POST — case number onto the report, onto the site,
+ * SLA clock, status ladder, tracking screen — is real code that needs a real
+ * response to exercise. Without this, every one of those paths is dead until
+ * the Aura method name for creating a request is known, and none of them can be
+ * demonstrated or tested.
+ *
+ * The number keeps Miami-Dade's `YY-NNNNNNNN` shape so nothing downstream has
+ * to special-case it, but the sequence starts at 9, far outside the county's
+ * live range (observed 00007377–00023441). Every ticket built from this is also
+ * flagged `simulated: true`, and that flag rides all the way out to the API
+ * response — a simulated case is never presented as a real one.
+ */
+function simulatedResponse(payload) {
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(2);
+  const seq = String(90000000 + Math.floor(Math.random() * 9999999)).slice(0, 8);
+
+  // The SLA the county quotes for this service, mirrored so the clock is right.
+  const businessDays = payload.service_code === 'COMPWPH' ? 30 : 90;
+  const expected = new Date(now);
+  expected.setDate(expected.getDate() + Math.round(businessDays * (7 / 5)));
+
+  return {
+    service_request_id: `${yy}-${seq}`,
+    status: 'open',
+    service_name: payload.service_name || null,
+    service_code: payload.service_code,
+    description: payload.description || null,
+    requested_datetime: now.toISOString(),
+    expected_datetime: expected.toISOString(),
+    updated_datetime: now.toISOString(),
+    closed_datetime: null,
+    canceled_datetime: null,
+    service_level_agreement: { value: businessDays, type: 'Business Days' },
+    owner: { name: 'Road, Bridges and Canals' },
+    address: payload.address_string || null,
+    lat: payload.lat,
+    long: payload.long,
+    activities: [],
+    events: [],
+    simulated: true,
+  };
 }
 
 /** Look up one ticket by its county number. Method name TBC. */
@@ -218,4 +269,5 @@ module.exports = {
   METHODS,
   DRY_RUN,
   FWUID,
+  simulatedResponse,
 };

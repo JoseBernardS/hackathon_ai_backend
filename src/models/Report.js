@@ -10,6 +10,13 @@ const reportSchema = new mongoose.Schema(
     subType: { type: String },
 
     description: { type: String },
+
+    // 1 cosmetic .. 5 immediate hazard. Proposed from the photo, confirmed by
+    // the resident. Absent on the 311 seed, which carries no severity.
+    severity: { type: Number, min: 1, max: 5 },
+    aiAssisted: { type: Boolean, default: false },
+    aiEdited: { type: Boolean, default: false },
+
     photoKeys: [{ type: String }],
     thumbKeys: [{ type: String }], // small versions for map pins; may be empty
 

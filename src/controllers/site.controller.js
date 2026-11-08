@@ -9,6 +9,8 @@ const { locate } = require('../services/locate.service');
 const { normalise, daysToClose } = require('../services/report.schema');
 const { buildTimeline, stagesFromTicket } = require('../services/mdc311.status');
 const mdc311 = require('../services/mdc311.service');
+const vision = require('../services/vision.service');
+const ReportDraft = require('../models/ReportDraft');
 
 /**
  * Sites and reports for any enabled category. `req.category` is the registry
@@ -208,39 +210,297 @@ async function listSites(req, res) {
 
 // POST /api/reports   (auth required, multipart/form-data, photo field: "photo")
 // Attaches to the existing site when there is one, so the map gains no new pin.
-async function createReport(req, res) {
-  const entry = req.category;
-  const point = parsePoint(req.body);
+// How far out we look for "is it this one?" candidates. Wider than the dedupe
+// radius on purpose: a pothole 120m away will not be auto-merged, but it is
+// still worth showing the resident before they file a second pin.
+const CANDIDATE_RADIUS_M = 150;
 
-  const subtypes = new Set(entry.subtypes.map((t) => t.code));
-  const subType = req.body.subType || entry.subtypes[0].code;
-  if (!subtypes.has(subType)) {
-    throw httpError(400, `subType must be one of: ${[...subtypes].join(', ')}`);
-  }
+// How many "is it this one?" cards to offer. More than three is a wall.
+const MAX_CANDIDATES = 3;
 
-  const photoKeys = [];
-  if (req.file) {
-    const stored = await uploads.putObject(req.file, `${entry.code}s`);
-    photoKeys.push(stored.key);
-  }
-
-  const [existing] = await Site.aggregate([
+/** Open sites near a point, nearest first. The resident decides, not us. */
+async function candidateSites(point, entry, limit = MAX_CANDIDATES) {
+  const near = await Site.aggregate([
     {
       $geoNear: {
         near: { type: 'Point', coordinates: point },
         distanceField: 'distanceMeters',
-        maxDistance: entry.dedupeRadiusMeters,
+        maxDistance: CANDIDATE_RADIUS_M,
         spherical: true,
-        query: { categoryCode: entry.code },
+        query: { categoryCode: entry.code, status: 'open' },
       },
     },
-    { $sort: { status: -1, distanceMeters: 1 } },
-    { $limit: 1 },
+    { $sort: { distanceMeters: 1 } },
+    { $limit: limit },
   ]);
+
+  return near.map((site) => ({ site, distanceMeters: Math.round(site.distanceMeters) }));
+}
+
+/**
+ * POST /api/reports/analyze — step 1 of two.
+ *
+ * Uploads the photo, asks the model what it shows, and returns a draft for the
+ * resident to confirm. Nothing is on the map and nothing has reached the county
+ * at this point; `POST /api/reports` with the returned draftId does that.
+ *
+ * If the model is unreachable the draft is still created, with
+ * `ai.available: false` — the resident then fills the fields in by hand and the
+ * flow is exactly what it was before any of this existed.
+ */
+async function analyzeDraft(req, res) {
+  const entry = req.category;
+  const point = parsePoint(req.body);
+
+  if (!req.file) throw httpError(400, 'A photo is required — send it in the "photo" field');
+
+  const [stored, candidates, verdict] = await Promise.all([
+    uploads.putObject(req.file, `${entry.code}s`),
+    candidateSites(point, entry),
+    vision.analysePhoto({
+      buffer: req.file.buffer,
+      mimeType: req.file.mimetype,
+      entry,
+    }),
+  ]);
+
+  const a = verdict.available ? verdict.analysis : {};
+  const draft = await ReportDraft.create({
+    categoryCode: entry.code,
+    location: { type: 'Point', coordinates: point },
+    address: req.body.address ? String(req.body.address).trim().slice(0, 200) : undefined,
+    photoKey: stored.key,
+    ai: {
+      available: verdict.available,
+      reason: verdict.available ? null : verdict.reason,
+      model: verdict.model || null,
+      matchesCategory: verdict.available ? a.matchesCategory : null,
+      confidence: verdict.available ? a.confidence : null,
+      subType: verdict.available ? a.subType : null,
+      severity: verdict.available ? a.severity : null,
+      description: verdict.available ? a.description : null,
+      hazards: verdict.available ? a.hazards : [],
+      rejectionReason: verdict.available ? a.rejectionReason : null,
+    },
+    reportedBy: req.user._id,
+  });
+
+  // What the resident is being asked to agree to. Pre-filled with the model's
+  // answer where it has one, with the registry default where it does not, so
+  // the form is never empty.
+  const proposal = {
+    subType: draft.ai.subType || entry.subtypes[0].code,
+    severity: draft.ai.severity,
+    description: draft.ai.description,
+    hazards: draft.ai.hazards || [],
+  };
+
+  /**
+   * "Is it this one?" — the cards the resident picks between.
+   *
+   * Deliberately just the facts and a photo. The person is standing in front of
+   * the pothole; they can tell whether it is the same one from a thumbnail far
+   * more reliably than anything server-side can, and for nothing.
+   */
+  const nearby = await Promise.all(
+    candidates.map(async (c) => {
+      const id = String(c.site._id);
+      const key = (c.site.thumbKeys || [])[0] || (c.site.photoKeys || [])[0];
+      return {
+        siteId: id,
+        distanceMeters: c.distanceMeters,
+        reportCount: c.site.reportCount,
+        endorsementCount: (c.site.endorsedBy || []).length,
+        totalVoices: c.site.reportCount + (c.site.endorsedBy || []).length,
+        address: c.site.address || null,
+        statusLabel: describeSite(c.site).statusLabel,
+        thumbnail: key ? await uploads.presign(key) : null,
+        // "It affects me too" — adds their weight here, files nothing new.
+        affectsMeEndpoint: `POST /api/sites/${id}/affects-me`,
+      };
+    })
+  );
+
+  res.status(201).json({
+    draftId: draft.id,
+    expiresInHours: 24,
+    photo: await uploads.presign(stored.key),
+    location: { lat: point[1], lng: point[0] },
+    nearby,
+    ai: {
+      available: draft.ai.available,
+      reason: draft.ai.reason,
+      model: draft.ai.model,
+      looksLikeCategory: draft.ai.matchesCategory,
+      confidence: draft.ai.confidence,
+      rejectionReason: draft.ai.rejectionReason,
+    },
+    proposal,
+    subtypeOptions: entry.subtypes.map((t) => ({ code: t.code, label: t.label })),
+    next: nearby.length
+      ? 'Ask "is it one of these?" — yes: POST the site\'s affectsMeEndpoint. No: POST /api/reports with { draftId, confirmed: true, consent: true, forceNewSite: true }'
+      : 'POST /api/reports with { draftId, confirmed: true, consent: true } plus any edits',
+  });
+}
+
+// Multipart sends booleans as the strings "true"/"false".
+function parseBool(raw) {
+  if (raw === undefined || raw === null || raw === '') return undefined;
+  if (typeof raw === 'boolean') return raw;
+  return ['true', '1', 'yes', 'on'].includes(String(raw).trim().toLowerCase());
+}
+
+async function createReport(req, res) {
+  const entry = req.category;
+
+  /**
+   * Two ways in.
+   *
+   * With a draftId the resident has already seen what the AI proposed and is
+   * agreeing to it, so the photo and coordinates come off the draft and the body
+   * carries only their edits. Without one this is the original direct path: a
+   * photo and a form, no model involved.
+   */
+  let draft = null;
+  if (req.body.draftId) {
+    draft = await ReportDraft.findById(req.body.draftId);
+    if (!draft) throw httpError(404, 'Draft not found or expired — analyze the photo again');
+    if (String(draft.reportedBy) !== String(req.user._id)) {
+      throw httpError(403, 'That draft belongs to another account');
+    }
+    if (draft.status === 'used') {
+      throw httpError(409, 'That draft has already been filed');
+    }
+    if (draft.categoryCode !== entry.code) {
+      throw httpError(400, `Draft is for category "${draft.categoryCode}", not "${entry.code}"`);
+    }
+    // The point of the two-step flow: nothing is written until they say so.
+    if (parseBool(req.body.confirmed) !== true) {
+      throw httpError(400, 'Send confirmed: true to file this draft');
+    }
+  }
+
+  const point = draft && req.body.lat === undefined
+    ? draft.location.coordinates
+    : parsePoint(req.body);
+
+  const subtypes = new Set(entry.subtypes.map((t) => t.code));
+  const subType =
+    req.body.subType || (draft && draft.ai.subType) || entry.subtypes[0].code;
+  if (!subtypes.has(subType)) {
+    throw httpError(400, `subType must be one of: ${[...subtypes].join(', ')}`);
+  }
+
+  // The resident's text wins; the model's stands only where they left it alone.
+  const ownDescription = req.body.description
+    ? String(req.body.description).trim().slice(0, 1000)
+    : undefined;
+  const description = ownDescription || (draft ? draft.ai.description || undefined : undefined);
+
+  const ownSeverity = Number(req.body.severity);
+  const severity = Number.isInteger(ownSeverity)
+    ? Math.min(5, Math.max(1, ownSeverity))
+    : (draft && draft.ai.severity) || undefined;
+
+  /**
+   * Preview mode — everything except the writes.
+   *
+   * For demoing on stage: the eligibility check, the payload and the dedupe
+   * decision are all real, the response is the same shape, and the database is
+   * untouched. The draft stays unused, so the same one can be replayed.
+   */
+  const preview = parseBool(req.body.preview) === true;
+
+  const photoKeys = [];
+  if (draft) {
+    photoKeys.push(draft.photoKey);
+  } else if (req.file && !preview) {
+    const stored = await uploads.putObject(req.file, `${entry.code}s`);
+    photoKeys.push(stored.key);
+  }
+
+  /**
+   * Which site this joins.
+   *
+   * `joinSiteId` — the resident said "yes, that one", so attach to it even if it
+   *   sits outside the dedupe radius.
+   * `forceNewSite` — they said "no, this is a different one". Geo would have
+   *   merged them silently; this is how they say otherwise.
+   * Neither — the original behaviour: nearest open site inside the radius.
+   */
+  let existing = null;
+  if (req.body.joinSiteId) {
+    existing = await Site.findById(req.body.joinSiteId);
+    if (!existing) throw httpError(404, 'joinSiteId does not match a site');
+    if (existing.categoryCode !== entry.code) {
+      throw httpError(400, 'joinSiteId is a site in another category');
+    }
+    existing.distanceMeters = 0;
+  } else if (parseBool(req.body.forceNewSite) !== true) {
+    [existing] = await Site.aggregate([
+      {
+        $geoNear: {
+          near: { type: 'Point', coordinates: point },
+          distanceField: 'distanceMeters',
+          maxDistance: entry.dedupeRadiusMeters,
+          spherical: true,
+          query: { categoryCode: entry.code },
+        },
+      },
+      { $sort: { status: -1, distanceMeters: 1 } },
+      { $limit: 1 },
+    ]);
+  }
 
   // A user report is bare lat/lng. Resolve the admin fields the 311 submit and
   // the map legend both need, or the site ends up with no municipality.
   const placed = await locate(point);
+
+  if (preview) {
+    const shape = normalise({
+      source: 'user', categoryCode: entry.code, subType, description, severity,
+      aiAssisted: Boolean(draft && draft.ai.available), aiEdited: false,
+      photoKeys, status: 'open',
+      address: req.body.address
+        ? String(req.body.address).trim().slice(0, 200)
+        : (draft && draft.address) || undefined,
+      location: { type: 'Point', coordinates: point },
+      reportedBy: req.user._id, reportedAt: new Date(),
+      siteId: existing ? existing._id : undefined,
+    }, { placed: await locate(point), entry });
+
+    const out = await mdc311.previewSubmit({
+      report: { ...shape, _id: 'preview' },
+      site: existing || { location: { type: 'Point', coordinates: point } },
+      user: req.user,
+      consent: parseBool(req.body.consent),
+    });
+
+    return res.status(200).json({
+      preview: true,
+      wouldCreate: {
+        report: { ...shape, photos: await Promise.all(photoKeys.map((k) => uploads.presign(k))) },
+        newSite: !existing,
+        joiningSiteId: existing ? String(existing._id) : null,
+      },
+      mergedIntoExistingSite: Boolean(existing),
+      distanceToSiteMeters: existing ? Math.round(existing.distanceMeters || 0) : 0,
+      located: await locate(point),
+      expectedDaysToClose: entry.baseline ? entry.baseline.medianDaysToClose : null,
+      filedWith311: out.skipped
+        ? { filed: false, reason: 'not_county_maintained', eligibility: out.eligibility }
+        : {
+            filed: Boolean(out.submitted),
+            simulated: true,
+            reason: out.failed ? out.error : null,
+            caseNumber: out.ticket ? out.ticket.externalId : null,
+            slaTarget: out.ticket ? out.ticket.slaTarget : null,
+            expectedAt: out.ticket ? out.ticket.expectedAt : null,
+            eligibility: out.eligibility,
+          },
+      note: 'Nothing was saved. Send without preview to file for real.',
+    });
+  }
 
   // Through the shared contract, so a user report lands with the same field
   // set as a seeded one. See services/report.schema.js.
@@ -248,10 +508,19 @@ async function createReport(req, res) {
     source: 'user',
     categoryCode: entry.code,
     subType,
-    description: req.body.description ? String(req.body.description).trim().slice(0, 1000) : undefined,
+    description,
+    severity,
+    aiAssisted: Boolean(draft && draft.ai.available),
+    // True when they changed what the model wrote — the honest signal for
+    // whether a human actually reviewed it or just tapped through.
+    aiEdited: Boolean(
+      draft && draft.ai.available && (ownDescription || Number.isInteger(ownSeverity) || req.body.subType)
+    ),
     photoKeys,
     status: 'open',
-    address: req.body.address ? String(req.body.address).trim().slice(0, 200) : undefined,
+    address: req.body.address
+      ? String(req.body.address).trim().slice(0, 200)
+      : (draft && draft.address) || undefined,
     location: { type: 'Point', coordinates: point },
     reportedBy: req.user._id,
     reportedAt: new Date(),
@@ -267,23 +536,45 @@ async function createReport(req, res) {
     report.siteId = site._id;
   }
 
+  if (draft) {
+    draft.status = 'used';
+    draft.usedAt = new Date();
+    draft.reportId = report._id;
+    await draft.save();
+  }
+
   // File it with the county in the same call. A 311 failure must not lose the
   // resident's report, so this never throws — the outcome is reported back.
   let filing = { filed: false, reason: 'not_attempted' };
   try {
-    const out = await mdc311.submitReport({ report, site, user: req.user });
+    const out = await mdc311.submitReport({
+      report,
+      site,
+      user: req.user,
+      consent: parseBool(req.body.consent),
+    });
     filing = out.skipped
       ? { filed: false, reason: 'not_county_maintained', eligibility: out.eligibility }
       : {
           filed: Boolean(out.submitted),
-          dryRun: Boolean(out.dryRun),
+          // True when the case number came from MDC311_DRY_RUN, not the county.
+          // Show a "simulated" badge — never present it as a real case.
+          simulated: Boolean(out.simulated || (out.ticket && out.ticket.simulated)),
           alreadyFiled: Boolean(out.alreadySubmitted),
           reason: out.failed ? out.error : null,
           caseNumber: out.ticket ? out.ticket.externalId : null,
+          slaTarget: out.ticket ? out.ticket.slaTarget || null : null,
+          expectedAt: out.ticket ? out.ticket.expectedAt || null : null,
           eligibility: out.eligibility,
         };
   } catch (err) {
     filing = { filed: false, reason: err.message };
+  }
+
+  // A real filing stamps the report with the county case number, which is one
+  // of the fields the site summarises. Rebuild so caseNumbers[] carries it.
+  if (filing.caseNumber) {
+    site = await rebuildSite(site._id);
   }
 
   res.status(201).json({
@@ -311,6 +602,38 @@ async function myReports(req, res) {
   });
 }
 
+/**
+ * POST /api/sites/:id/affects-me ὑ2 — "It affects me too".
+ *
+ * The alternative to filing a second report on a problem already on the map:
+ * it adds the resident's weight to the existing site without creating another
+ * pin, another 311 case or another photo to store.
+ *
+ * Idempotent — $addToSet, so a double tap is the same as one. Counted apart
+ * from reportCount so the two claims stay honest: one is a photographed
+ * report, this is a tap.
+ */
+async function endorseSite(req, res) {
+  const site = await Site.findById(req.params.id);
+  if (!site) throw httpError(404, 'Site not found');
+
+  const already = (site.endorsedBy || []).some((u) => String(u) === String(req.user._id));
+  if (!already) {
+    await Site.updateOne({ _id: site._id }, { $addToSet: { endorsedBy: req.user._id } });
+  }
+
+  const fresh = await Site.findById(site._id);
+  res.json({
+    siteId: String(fresh._id),
+    endorsed: true,
+    alreadyEndorsed: already,
+    endorsementCount: (fresh.endorsedBy || []).length,
+    reportCount: fresh.reportCount,
+    // What to show: "29 reports and 4 others say it affects them too"
+    totalVoices: fresh.reportCount + (fresh.endorsedBy || []).length,
+  });
+}
+
 // GET /api/sites/:id   — a site plus every report behind it
 async function getSite(req, res) {
   const site = await Site.findById(req.params.id).catch(() => null);
@@ -327,6 +650,20 @@ async function getSite(req, res) {
     ...json,
     display: describeSite(json, ticket, categories.get(site.categoryCode)),
     roadOwnership: await mdc311.checkEligibility(json),
+    /**
+     * "Affects me too" state for whoever is reading.
+     *
+     * `youEndorsed` is false for a signed-out visitor, so the button renders
+     * unpressed and the sign-in prompt happens on tap rather than on load.
+     */
+    endorsement: {
+      endorsementCount: (site.endorsedBy || []).length,
+      totalVoices: site.reportCount + (site.endorsedBy || []).length,
+      youEndorsed: Boolean(
+        req.user && (site.endorsedBy || []).some((u) => String(u) === String(req.user._id))
+      ),
+      endpoint: `POST /api/sites/${site.id}/affects-me`,
+    },
     // The county's own view of the case, folded in here rather than behind a
     // separate tickets endpoint. Null when no ticket has been filed.
     progress: ticket ? countyProgress(ticket) : null,
@@ -335,4 +672,4 @@ async function getSite(req, res) {
   });
 }
 
-module.exports = { listSites, createReport, myReports, getSite };
+module.exports = { listSites, analyzeDraft, createReport, myReports, getSite, endorseSite };

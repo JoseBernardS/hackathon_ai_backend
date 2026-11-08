@@ -91,12 +91,28 @@ async function checkEligibility(site) {
 
 /* -------------------------------- payload -------------------------------- */
 
-function buildPayload({ site, report, user, serviceCode = config.serviceCode }) {
+function buildPayload({ site, report, user, consent, serviceCode = config.serviceCode }) {
   const [lng, lat] = site.location.coordinates;
   const attribute = { ...config.attributeDefaults };
 
+  /**
+   * The subtype must map to a county value, or we do not file.
+   *
+   * This used to fall through to the default, which is "Potholes" — so a
+   * guardrail report reached Miami-Dade labelled as a pothole and a crew was
+   * dispatched for the wrong thing. An unmapped subtype is a gap in our
+   * registry, not something to paper over: fail loudly so it gets fixed, or so
+   * the resident is asked.
+   */
   const mapped = config.subTypeToAttribute[report.subType];
-  if (mapped) attribute['01PL-ROADWAYISSUE'] = mapped;
+  if (!mapped) {
+    const err = new Error(
+      `No Miami-Dade value for subType "${report.subType}" — cannot file this with 311`
+    );
+    err.status = 422;
+    throw err;
+  }
+  attribute['01PL-ROADWAYISSUE'] = mapped;
 
   return {
     service_code: serviceCode,
@@ -112,7 +128,9 @@ function buildPayload({ site, report, user, serviceCode = config.serviceCode }) 
       email: user.email || '',
       phone: user.phone || '',
     },
-    user_consent: true,
+    // Asserted by the resident on the confirm step, never by us: filing sends
+    // their name, email and phone to a public county case.
+    user_consent: Boolean(consent),
     consent_message: '',
   };
 }
@@ -124,7 +142,7 @@ function missingContactFields(user) {
 
 /* -------------------------------- submit --------------------------------- */
 
-async function submitReport({ report, site, user }) {
+async function submitReport({ report, site, user, consent }) {
   const eligibility = await checkEligibility(site);
   if (!eligibility.eligible) {
     return { skipped: true, eligibility };
@@ -149,7 +167,7 @@ async function submitReport({ report, site, user }) {
     return { alreadySubmitted: true, ticket: existing, eligibility };
   }
 
-  const payload = buildPayload({ site, report, user, serviceCode: eligibility.serviceCode });
+  const payload = buildPayload({ site, report, user, consent, serviceCode: eligibility.serviceCode });
 
   // Written BEFORE the POST: if the response is lost, the row is still here.
   const ticket =
@@ -176,17 +194,35 @@ async function submitReport({ report, site, user }) {
     return { failed: true, ticket, eligibility, error: ticket.lastError };
   }
 
-  if (result.dryRun) {
-    ticket.status = 'dry_run';
-    ticket.lastError = undefined;
-    await ticket.save();
-    return { dryRun: true, ticket, eligibility, wouldSend: result.wouldSend };
-  }
-
+  /**
+   * A dry run now takes the same path as a real submission.
+   *
+   * The client hands back a county-shaped reply with a case number, so every
+   * downstream step — case number onto the report and the site, SLA clock,
+   * status ladder, the tracking screen — runs for real against simulated
+   * input, instead of being dead code until the create method is known.
+   */
   const clean = sanitiseTicket(result.response || {});
   Object.assign(ticket, clean, { status: deriveStatus(result.response || {}).status });
+  ticket.simulated = Boolean(result.dryRun);
+  ticket.lastError = undefined;
   ticket.lastCheckedAt = new Date();
   await ticket.save();
+
+  /**
+   * Write the case number back onto the report.
+   *
+   * Without this it lives only on the ticket: `site.caseNumbers[]` and
+   * `latestCaseNumber` are both derived from `report.sourceId` (see
+   * dedupe.service summarise), so every report filed from the app would show a
+   * case number once in the HTTP response and never again. The 334 seeded rows
+   * have theirs from the county export, which is why the gap is invisible until
+   * a resident actually files one.
+   */
+  if (clean.externalId && !report.sourceId) {
+    report.sourceId = clean.externalId;
+    await Report.updateOne({ _id: report._id }, { $set: { sourceId: clean.externalId } });
+  }
 
   await StatusEvent.create({
     ticketId: ticket._id,
@@ -198,7 +234,13 @@ async function submitReport({ report, site, user }) {
     evidence: { externalId: clean.externalId, requestedDatetime: clean.openedAt },
   });
 
-  return { submitted: true, ticket, eligibility };
+  return {
+    submitted: true,
+    ticket,
+    eligibility,
+    simulated: Boolean(result.dryRun),
+    wouldSend: result.wouldSend,
+  };
 }
 
 /* ------------------------------- backfill -------------------------------- */
@@ -211,6 +253,52 @@ async function submitReport({ report, site, user }) {
  * refreshTicket's job, which keeps the slow network step separate from the
  * cheap bookkeeping and makes a backfill resumable.
  */
+/**
+ * What `submitReport` would do, without doing any of it.
+ *
+ * Runs the real eligibility check against the county's road-maintenance layer
+ * and builds the real payload, then stops. No ExternalTicket, no StatusEvent,
+ * no write of any kind — so a demo can file the same report twenty times and
+ * leave the database exactly as it found it.
+ */
+async function previewSubmit({ report, site, user, consent }) {
+  const eligibility = await checkEligibility(site);
+  if (!eligibility.eligible) return { skipped: true, eligibility };
+
+  const missing = missingContactFields(user);
+  if (missing.length) {
+    return { failed: true, eligibility, error: `311 requires ${missing.join(', ')} on the account` };
+  }
+
+  let payload;
+  try {
+    payload = buildPayload({ site, report, user, consent, serviceCode: eligibility.serviceCode });
+  } catch (err) {
+    return { failed: true, eligibility, error: err.message };
+  }
+
+  // The same simulated reply the dry-run client produces, so a preview and a
+  // dry-run filing are indistinguishable to the frontend.
+  const simulated = client.simulatedResponse(payload);
+  const clean = sanitiseTicket(simulated);
+
+  return {
+    submitted: true,
+    simulated: true,
+    preview: true,
+    eligibility,
+    payload,
+    ticket: {
+      externalId: clean.externalId,
+      slaTarget: clean.slaTarget,
+      expectedAt: clean.expectedAt,
+      openedAt: clean.openedAt,
+      ownerName: clean.ownerName,
+      simulated: true,
+    },
+  };
+}
+
 async function adoptReport(report, { siteId } = {}) {
   if (!report.sourceId) return { skipped: 'no county case number' };
 
@@ -282,6 +370,8 @@ async function stagesFor(serviceCode, ticket = null) {
  */
 async function refreshTicket(ticket, { force = false, source = 'mdc311_lookup' } = {}) {
   if (!ticket.externalId) return { ticket, skipped: 'no external id yet' };
+  // The county never issued this number, so there is nothing to ask it about.
+  if (ticket.simulated) return { ticket, skipped: 'simulated case — not a county record' };
 
   const fresh =
     ticket.lastCheckedAt && Date.now() - ticket.lastCheckedAt.getTime() < LOOKUP_CACHE_MS;
@@ -335,6 +425,7 @@ function openTicketsDueCheck(limit = 50) {
   return ExternalTicket.find({
     status: { $in: ['reported', 'acknowledged', 'in_progress'] },
     externalId: { $ne: null },
+    simulated: { $ne: true }, // never poll the county for a number it never issued
   })
     .sort({ lastCheckedAt: 1 })
     .limit(limit);
@@ -342,6 +433,6 @@ function openTicketsDueCheck(limit = 50) {
 
 module.exports = {
   checkEligibility, buildPayload, missingContactFields,
-  submitReport, adoptReport, refreshTicket, openTicketsDueCheck, stagesFor,
+  submitReport, previewSubmit, adoptReport, refreshTicket, openTicketsDueCheck, stagesFor,
   LOOKUP_CACHE_MS, config,
 };

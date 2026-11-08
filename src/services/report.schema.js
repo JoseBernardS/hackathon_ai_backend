@@ -44,6 +44,9 @@ const OPTIONAL = {
   reportedBy: 'user reports only',
   photoKeys: 'both paths',
   thumbKeys: 'seed only — the one intentional asymmetry, see note below',
+  severity: 'user reports only — proposed from the photo, confirmed by the resident',
+  aiAssisted: 'user reports only — was a photo analysis offered for this report',
+  aiEdited: 'user reports only — did the resident change what the model proposed',
 };
 
 /**

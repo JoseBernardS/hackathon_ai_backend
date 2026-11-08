@@ -29,4 +29,29 @@ async function requireAuth(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth };
+/**
+ * Attaches `req.user` when a valid token is present, and does nothing when it
+ * is not. Never rejects.
+ *
+ * For endpoints that are public but render differently once signed in — the
+ * site sheet needs to know whether *this* resident already pressed "Affects me
+ * too", and a signed-out visitor must still be able to read the page.
+ */
+async function optionalAuth(req, res, next) {
+  const header = req.headers.authorization || '';
+  const [scheme, token] = header.split(' ');
+  if (scheme !== 'Bearer' || !token) return next();
+
+  try {
+    const payload = verifyToken(token);
+    const user = await User.findById(payload.sub);
+    if (user && user.status === 'active' && user.tokenVersion === payload.tv) {
+      req.user = user;
+    }
+  } catch {
+    // An expired or junk token on a public route is just an anonymous visit.
+  }
+  next();
+}
+
+module.exports = { requireAuth, optionalAuth };

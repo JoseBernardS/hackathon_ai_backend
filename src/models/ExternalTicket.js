@@ -24,6 +24,12 @@ const externalTicketSchema = new mongoose.Schema(
     // The county's own case number, e.g. "26-00375271". Unique per source.
     externalId: { type: String, index: true, sparse: true },
 
+    // True when the case number came from MDC311_DRY_RUN rather than the
+    // county. Rides out to the API response so a simulated case is never
+    // shown as a real one, and keeps the status sweep from asking Miami-Dade
+    // about a number it never issued.
+    simulated: { type: Boolean, default: false, index: true },
+
     reportId: { type: mongoose.Schema.Types.ObjectId, ref: 'Report', index: true },
     siteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Site', index: true },
     submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -87,7 +93,20 @@ const externalTicketSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-externalTicketSchema.index({ source: 1, externalId: 1 }, { unique: true, sparse: true });
+/**
+ * One ticket per county case number.
+ *
+ * Must be PARTIAL, not sparse. A sparse compound index only skips a document
+ * when every indexed field is missing, and `source` always has a value — so
+ * every row got indexed and the second ticket with externalId null collided
+ * with the first. Tickets are written before the county call, and every
+ * dry-run ticket keeps externalId null, so that is the normal case rather
+ * than an edge one.
+ */
+externalTicketSchema.index(
+  { source: 1, externalId: 1 },
+  { unique: true, partialFilterExpression: { externalId: { $type: 'string' } } }
+);
 // Drives the sweep: open tickets, oldest check first.
 externalTicketSchema.index({ status: 1, lastCheckedAt: 1 });
 

@@ -25,6 +25,11 @@ const siteSchema = new mongoose.Schema(
     status: { type: String, enum: ['open', 'closed'], required: true, index: true },
 
     reportCount: { type: Number, default: 1, index: true },
+
+    // "It affects me too" — residents who confirmed the problem without filing
+    // a second report. Kept separate from reportCount so the two claims stay
+    // honest: one is a photographed report, the other is a tap.
+    endorsedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     openCount: { type: Number, default: 0 },
     userReportCount: { type: Number, default: 0 },
 
@@ -80,6 +85,10 @@ siteSchema.set('toJSON', {
     ret.photoKeys = ret.photoKeys || [];
     ret.thumbKeys = ret.thumbKeys || [];
     ret.caseNumbers = ret.caseNumbers || [];
+    // Count, never the list — who endorsed is nobody else's business.
+    ret.endorsementCount = (ret.endorsedBy || []).length;
+    delete ret.endorsedBy;
+    ret.totalVoices = (ret.reportCount || 0) + ret.endorsementCount;
     return ret;
   },
 });
