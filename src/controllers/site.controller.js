@@ -18,6 +18,19 @@ const ReportDraft = require('../models/ReportDraft');
  * specific category, so enabling a second one needs no changes to this file.
  */
 
+/**
+ * What to call a resident on screen.
+ *
+ * Never null: 2 of 15 accounts have neither a displayName nor a firstName
+ * (both are optional at sign-up), and a null here reaches the client as
+ * `by: null`, which breaks any renderer that takes an initial off it.
+ * They passed ID onboarding, so "A resident" is accurate, not a placeholder.
+ */
+function residentName(user) {
+  if (!user) return 'A resident';
+  return user.displayName || user.firstName || 'A resident';
+}
+
 function httpError(status, message) {
   const err = new Error(message);
   err.status = status;
@@ -672,7 +685,7 @@ async function verifySite(req, res) {
     fixed,
     at: new Date(),
     // Denormalised: "Confirmed fixed by Maria G." must survive a rename.
-    name: req.user.displayName || req.user.firstName || null,
+    name: residentName(req.user),
     note: req.body.note ? String(req.body.note).trim().slice(0, 500) : undefined,
     photoKey,
   };
@@ -734,9 +747,10 @@ async function getSite(req, res) {
         : null,
       // Names of the residents who said it is fixed — "Confirmed by Maria G."
       confirmedBy: (site.verifications || [])
-        .filter((v) => v.fixed && v.name)
+        .filter((v) => v.fixed)
         .slice(-3)
-        .map((v) => v.name),
+        // Entries written before this fallback existed can still hold null.
+        .map((v) => v.name || 'A resident'),
       /**
        * The pictures residents attached, newest first.
        *
@@ -751,7 +765,7 @@ async function getSite(req, res) {
           .reverse()
           .map(async (v) => ({
             says: v.fixed ? 'fixed' : 'not_fixed',
-            by: v.name || null,
+            by: v.name || 'A resident',
             at: v.at,
             note: v.note || null,
             photo: await uploads.presign(v.photoKey),

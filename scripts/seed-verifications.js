@@ -45,9 +45,11 @@ const FIXED = [
 const PHOTO_DIR = '/Users/jss3466/Downloads/pothole_pics';
 
 async function clear() {
+  // `seeded: { $ne: true }` catches entries written by hand while testing,
+  // which carry no flag and would otherwise linger with no name or note.
   const res = await Site.updateMany(
-    { 'verifications.seeded': true },
-    { $pull: { verifications: { seeded: true } } }
+    { 'verifications.0': { $exists: true } },
+    { $pull: { verifications: { $or: [{ seeded: true }, { name: null }, { name: { $exists: false } }] } } }
   );
   const users = await User.deleteMany({ seeded: true });
   console.log(`cleared seeded verifications from ${res.modifiedCount} site(s)`);
@@ -87,10 +89,15 @@ async function main() {
   }
   console.log(`demo residents: ${residents.length}`);
 
-  // A few real pothole photos as evidence, uploaded once and reused.
+  /**
+   * Real pothole photos as evidence — one per verification, never reused.
+   *
+   * Four images repeated across eighteen claims reads as obviously synthetic
+   * the moment two of them are on screen together.
+   */
   let photoKeys = [];
   if (fs.existsSync(PHOTO_DIR)) {
-    const files = fs.readdirSync(PHOTO_DIR).filter((f) => /\.jpe?g$/i.test(f)).slice(0, 4);
+    const files = fs.readdirSync(PHOTO_DIR).filter((f) => /\.jpe?g$/i.test(f)).slice(0, 24);
     for (const f of files) {
       const buf = fs.readFileSync(path.join(PHOTO_DIR, f));
       const stored = await uploads.putObject(
@@ -107,8 +114,11 @@ async function main() {
   console.log(`targets: ${closed.length} closed, ${open.length} open`);
 
   let rr = 0;
+  let pp = 0;
   const nextResident = () => residents[rr++ % residents.length];
   const pick = (arr, i) => arr[i % arr.length];
+  // Sequential, so no two claims carry the same picture.
+  const nextPhoto = () => (pp < photoKeys.length ? photoKeys[pp++] : undefined);
 
   /** Writes `n` answers onto a site, `yes` of which say it is fixed. */
   async function voteOn(site, n, yes, withPhotos) {
@@ -123,7 +133,7 @@ async function main() {
         at: new Date(Date.now() - (i * 3 + 1) * 86400000),
         name: u.displayName,
         note: fixed ? pick(FIXED, i + rr) : pick(STILL_THERE, i + rr),
-        photoKey: withPhotos && photoKeys.length ? pick(photoKeys, i + rr) : undefined,
+        photoKey: withPhotos ? nextPhoto() : undefined,
         seeded: true,
       });
     }
